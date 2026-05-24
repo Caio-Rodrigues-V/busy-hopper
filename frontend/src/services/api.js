@@ -58,21 +58,21 @@ export const authAPI = {
 };
 
 export const companyAPI = {
-  list: () => api.get("/companies"),
-  create: (name, mission) => api.post("/companies", { name, mission }),
+  list: () => api.get("/companies/"),
+  create: (name, mission) => api.post("/companies/", { name, mission }),
   update: (id, data) => api.put(`/companies/${id}`, data),
   get: (id) => api.get(`/companies/${id}`),
 };
 
 export const credentialAPI = {
-  list: () => api.get("/credentials"),
-  create: (provider, apiKey) => api.post("/credentials", { provider, api_key: apiKey }),
+  list: () => api.get("/credentials/"),
+  create: (provider, apiKey) => api.post("/credentials/", { provider, api_key: apiKey }),
   delete: (id) => api.delete(`/credentials/${id}`),
 };
 
 export const agentAPI = {
-  list: () => api.get("/agents"),
-  create: (data) => api.post("/agents", data),
+  list: () => api.get("/agents/"),
+  create: (data) => api.post("/agents/", data),
   update: (id, data) => api.put(`/agents/${id}`, data),
   delete: (id) => api.delete(`/agents/${id}`),
   getArtifacts: (agentId) => api.get(`/agents/${agentId}/artifacts`),
@@ -80,14 +80,14 @@ export const agentAPI = {
 };
 
 export const taskAPI = {
-  list: () => api.get("/tasks"),
-  create: (data) => api.post("/tasks", data),
+  list: () => api.get("/tasks/"),
+  create: (data) => api.post("/tasks/", data),
   get: (id) => api.get(`/tasks/${id}`),
   getRuns: (id) => api.get(`/tasks/${id}/runs`),
 };
 
 export const approvalAPI = {
-  list: () => api.get("/approvals"),
+  list: () => api.get("/approvals/"),
   decide: (id, decision) => api.post(`/approvals/${id}/decide`, { decision }),
 };
 
@@ -96,7 +96,7 @@ export const dashboardAPI = {
 };
 
 export const auditAPI = {
-  listLogs: () => api.get("/audit"),
+  listLogs: () => api.get("/audit/"),
 };
 
 export const metaAPI = {

@@ -11,7 +11,8 @@ import {
   LogOut, 
   Plus,
   Loader2,
-  Megaphone
+  Megaphone,
+  X
 } from "lucide-react";
 
 export default function Layout({ children }) {
@@ -208,6 +209,15 @@ export default function Layout({ children }) {
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="w-full max-w-lg glass-panel rounded-2xl p-8 relative shadow-2xl">
+            {/* Close Button */}
+            <button
+              onClick={() => setShowCreateModal(false)}
+              className="absolute top-4 right-4 text-dark-muted hover:text-white transition-colors"
+              title="Close modal"
+            >
+              <X size={20} />
+            </button>
+
             <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-3">
               <Building2 className="text-brand-primary" />
               <span>Launch Enterprise</span>
@@ -244,15 +254,13 @@ export default function Layout({ children }) {
               </div>
 
               <div className="flex gap-3 justify-end pt-3">
-                {companies.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateModal(false)}
-                    className="border border-dark-border hover:bg-dark-border/20 text-white font-semibold rounded-xl px-6 py-2.5 text-sm transition-colors"
-                  >
-                    Cancel
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="border border-dark-border hover:bg-dark-border/20 text-white font-semibold rounded-xl px-6 py-2.5 text-sm transition-colors"
+                >
+                  Cancel
+                </button>
                 <button
                   type="submit"
                   disabled={submitting}

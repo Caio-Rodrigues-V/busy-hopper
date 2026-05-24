@@ -73,6 +73,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Trust proxy headers for HTTPS redirects
+@app.middleware("http")
+async def forward_proto_middleware(request, call_next):
+    if request.headers.get("x-forwarded-proto") == "https":
+        request.scope["scheme"] = "https"
+    response = await call_next(request)
+    return response
+
 # Register Endpoints
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
 app.include_router(companies.router, prefix=f"{settings.API_V1_STR}/companies", tags=["companies"])
