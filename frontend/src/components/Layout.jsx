@@ -41,6 +41,9 @@ export default function Layout({ children }) {
         
         setSelectedCompanyId(defaultId);
         localStorage.setItem("companyId", defaultId);
+        if (!storedId) {
+          window.location.reload();
+        }
       } else {
         // Trigger create company onboarding
         setShowCreateModal(true);
