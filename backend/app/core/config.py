@@ -38,5 +38,7 @@ class Settings(BaseSettings):
             self.DATABASE_URL = f"sqlite+aiosqlite:///{db_path.replace('\\', '/')}"
         elif self.DATABASE_URL.startswith("postgresql://"):
             self.DATABASE_URL = self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+        elif self.DATABASE_URL.startswith("postgres://"):
+            self.DATABASE_URL = self.DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
 
 settings = Settings()
