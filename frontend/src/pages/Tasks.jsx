@@ -93,7 +93,10 @@ export default function Tasks() {
 
     const token = localStorage.getItem("token");
     // Use ws relative path with token parameter
-    const wsUrl = `ws://localhost:8000/api/v1/ws/${companyId}${token ? `?token=${encodeURIComponent(token)}` : ""}`;
+    const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+    const wsProtocol = backendUrl.startsWith("https") ? "wss" : "ws";
+    const wsHost = backendUrl.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    const wsUrl = `${wsProtocol}://${wsHost}/api/v1/ws/${companyId}${token ? `?token=${encodeURIComponent(token)}` : ""}`;
     logger("Establishing WebSocket connection to " + wsUrl);
     
     const ws = new WebSocket(wsUrl);
