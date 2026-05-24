@@ -7,8 +7,7 @@ from app.core.deps import get_db, get_current_user, get_current_company
 from app.models.user import User
 from app.models.company import Company
 from app.models.agent import Agent
-from app.models.run import Run
-from app.models.run_step import RunStep
+from app.models.run import Run, RunStep
 from app.schemas.agent import AgentCreate, AgentResponse, AgentUpdate
 from app.services.agent_executor import create_audit_entry
 from fastapi.responses import FileResponse
