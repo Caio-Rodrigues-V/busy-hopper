@@ -42,9 +42,9 @@ Prerequisites: Python 3.11 or 3.12.
 
 4. Create a `.env` file based on `.env.example` (or use the populated defaults for local testing):
    ```
-   SECRET_KEY=super_secret_jwt_key_for_local_dev_change_me_in_production_12345
-   ENCRYPTION_KEY=8lqWc_wA-p5HcrgC5lV4TfV3r4f7h9L3t9u3j2m1G4c=
-   DATABASE_URL=sqlite+aiosqlite:///./orchestrator.db
+   SECRET_KEY=your_jwt_secret_key_here
+   ENCRYPTION_KEY=your_32_byte_base64_encryption_key_here
+   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres
    ANTHROPIC_API_KEY=your_anthropic_api_key_here
    ```
 

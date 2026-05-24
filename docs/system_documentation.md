@@ -198,3 +198,21 @@ O painel de controle é organizado nas seguintes visões:
 * **Approvals (Aprovações)**: Fila de auditoria onde o usuário revisa comandos sensíveis e disparos de marketing solicitados pelos agentes.
 * **Meta Ads**: Central de configurações de anúncios, permitindo inserir credenciais e acompanhar o status de entrega das campanhas.
 * **Settings**: Edição dos dados da empresa, declaração da missão e ajuste fino das chaves de API globais.
+
+---
+
+## 10. Arquitetura do Scheduler e Deploy em Escala
+
+### O Desafio da Concorrência do Scheduler
+Atualmente, o background scheduler (responsável por rodar os heartbeats e capturar tarefas periódicas) é iniciado diretamente no lifespan do aplicativo FastAPI ([main.py](file:///C:/Users/caiov/Documents/antigravity/busy-hopper/backend/app/main.py)). 
+
+Em ambientes de produção com escalabilidade horizontal (como deploys em Kubernetes com múltiplas réplicas ou servidores web rodando múltiplos workers Gunicorn/Uvicorn), esta arquitetura faz com que **N instâncias do scheduler rodem em paralelo**. Embora o uso do bloqueio atômico `SELECT FOR UPDATE SKIP LOCKED` garanta consistência e evite que a mesma tarefa seja executada duas vezes (dupla execução), existe um custo ineficiente associado a múltiplos schedulers realizando polls periódicos no banco de dados.
+
+### Proposta de Extração (Single-Instance Scheduler)
+Para deploys de alta confiabilidade em produção, recomenda-se separar o scheduler do servidor HTTP principal da seguinte forma:
+
+1. **Desabilitar o Scheduler na App HTTP**:
+   Remover as chamadas `start_scheduler()` e `shutdown_scheduler()` do lifespan em `main.py` quando a aplicação estiver rodando como servidora HTTP (por exemplo, sob uma flag de ambiente como `RUN_SCHEDULER=false`).
+
+2. **Criar um Processo Dedicado para o Scheduler**:
+   Criar um entrypoint CLI ou script python independente (ex: `python app/run_scheduler.py`) que apenas inicializa o loop do APScheduler e executa a verificação e o reaping de tarefas. Este script rodaria como uma réplica única (Single-Instance pod/serviço) em seu ambiente de nuvem, eliminando totalmente a sobrecarga de polling redundante.

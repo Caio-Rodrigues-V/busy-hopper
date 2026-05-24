@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 from app.core.database import Base
 
 class Company(Base):
@@ -12,7 +12,7 @@ class Company(Base):
     mission = Column(String, nullable=False)
     monthly_budget_usd = Column(Float, default=100.0)
     markup_pct = Column(Float, default=20.0) # markup markup_pct, e.g., 20.0 means cost * 1.2
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     user = relationship("User", back_populates="companies")
     credentials = relationship("ApiCredential", back_populates="company", cascade="all, delete-orphan")

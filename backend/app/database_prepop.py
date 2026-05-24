@@ -19,10 +19,11 @@ async def main():
         admin_email = os.getenv("ADMIN_EMAIL", "admin@autonomous.corp")
         admin_password = os.getenv("ADMIN_PASSWORD")
         
-        # If in production and no password is set, skip default admin seeding for safety
-        if is_production and not admin_password:
-            print("[Warning] Skipping database seeding: ADMIN_PASSWORD is not set in production.")
-            return
+        # If in production, require a custom strong password
+        if is_production:
+            if not admin_password or admin_password == "password123":
+                print("[Warning] Skipping database seeding: ADMIN_PASSWORD is not set or is set to weak default ('password123') in production.")
+                return
 
         password = admin_password or "password123"
 

@@ -1,22 +1,25 @@
 import logging
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from typing import Optional
 from jose import jwt
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.security import ALGORITHM
 from app.services.websocket_manager import manager
 from app.services.scheduler import start_scheduler, shutdown_scheduler
+from app.core.deps import get_db
 
 from app.api import auth, companies, api_credentials, agents, tasks, approvals, dashboard, audit, meta
 from app.core.database import SessionLocal
 from sqlalchemy.future import select
 from app.models.company import Company
+from app.core.logging_config import setup_logging
 
 # Setup logger
-logging.basicConfig(level=logging.INFO)
+setup_logging()
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
@@ -44,13 +47,25 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to run database migrations: {e}")
 
     # 2. Run database prepopulation/seeding programmatically
+    if os.getenv("SEED_DATABASE") == "true":
+        try:
+            logger.info("Running database seeding programmatically...")
+            from app.database_prepop import main as seed_db
+            await seed_db()
+            logger.info("Database seeding completed.")
+        except Exception as e:
+            logger.error(f"Failed to seed database: {e}")
+    else:
+        logger.info("Database seeding skipped (SEED_DATABASE env var is not set to 'true').")
+
+    # 3. Run orphan runs reaper on boot
     try:
-        logger.info("Running database seeding programmatically...")
-        from app.database_prepop import main as seed_db
-        await seed_db()
-        logger.info("Database seeding completed.")
+        logger.info("Running orphan runs reaper...")
+        from app.services.scheduler import reap_orphan_runs
+        async with SessionLocal() as db:
+            await reap_orphan_runs(db)
     except Exception as e:
-        logger.error(f"Failed to seed database: {e}")
+        logger.error(f"Failed to run orphan runs reaper: {e}")
 
     # Startup: Start APScheduler agent heartbeats
     start_scheduler()
@@ -91,6 +106,34 @@ app.include_router(approvals.router, prefix=f"{settings.API_V1_STR}/approvals", 
 app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}/dashboard", tags=["dashboard"])
 app.include_router(audit.router, prefix=f"{settings.API_V1_STR}/audit", tags=["audit"])
 app.include_router(meta.router, prefix=f"{settings.API_V1_STR}/meta", tags=["meta"])
+
+@app.get("/health")
+async def health_check(db: AsyncSession = Depends(get_db)):
+    # 1. Verify Database Connectivity
+    try:
+        from sqlalchemy import text
+        await db.execute(text("SELECT 1"))
+    except Exception as e:
+        logger.error(f"Health check failed: database connection error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is unavailable."
+        )
+
+    # 2. Verify Scheduler Heartbeats loop activity
+    from app.services.scheduler import scheduler
+    if not scheduler.running:
+        logger.error("Health check failed: scheduler is not running.")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Scheduler is not running."
+        )
+
+    return {
+        "status": "healthy",
+        "database": "connected",
+        "scheduler": "running"
+    }
 
 @app.websocket("/api/v1/ws/{company_id}")
 async def websocket_endpoint(

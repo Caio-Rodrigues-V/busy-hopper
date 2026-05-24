@@ -62,8 +62,9 @@ async def get_task(
     db: AsyncSession = Depends(get_db),
     company: Company = Depends(get_current_company)
 ):
-    task = await db.get(Task, task_id)
-    if not task or task.company_id != company.id:
+    res = await db.execute(select(Task).filter(Task.id == task_id, Task.company_id == company.id))
+    task = res.scalars().first()
+    if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
     return task
 
@@ -73,8 +74,9 @@ async def list_task_runs(
     db: AsyncSession = Depends(get_db),
     company: Company = Depends(get_current_company)
 ):
-    task = await db.get(Task, task_id)
-    if not task or task.company_id != company.id:
+    res = await db.execute(select(Task).filter(Task.id == task_id, Task.company_id == company.id))
+    task = res.scalars().first()
+    if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
         
     # Query task runs with preloaded step elements

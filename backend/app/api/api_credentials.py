@@ -73,8 +73,9 @@ async def delete_credential(
     company: Company = Depends(get_current_company),
     current_user: User = Depends(get_current_user)
 ):
-    cred = await db.get(ApiCredential, cred_id)
-    if not cred or cred.company_id != company.id:
+    res = await db.execute(select(ApiCredential).filter(ApiCredential.id == cred_id, ApiCredential.company_id == company.id))
+    cred = res.scalars().first()
+    if not cred:
         raise HTTPException(status_code=404, detail="Credential not found")
         
     await db.delete(cred)

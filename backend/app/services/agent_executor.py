@@ -3,7 +3,8 @@ import os
 import subprocess
 import time
 import json
-from datetime import datetime
+import asyncio
+from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional, Tuple
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,23 +20,22 @@ from app.models.api_credential import ApiCredential
 from app.core.security import decrypt_key
 from app.core.config import settings
 from app.services.websocket_manager import manager
+from app.core.logging_config import execution_context
 
 logger = logging.getLogger(__name__)
 
 # Constants
 MAX_ITERATIONS = 10
 
+_checkout_lock = asyncio.Lock()
+_active_tasks = set()
+
 def estimate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
     """Calculates Claude token usage costs based on rates."""
-    rates = {
-        "claude-3-5-sonnet-20241022": {"input": 3.0 / 1_000_000, "output": 15.0 / 1_000_000},
-        "claude-3-5-sonnet-latest": {"input": 3.0 / 1_000_000, "output": 15.0 / 1_000_000},
-        "claude-3-opus-20240229": {"input": 15.0 / 1_000_000, "output": 75.0 / 1_000_000},
-        "claude-3-haiku-20240307": {"input": 0.25 / 1_000_000, "output": 1.25 / 1_000_000},
-    }
+    rates = settings.LLM_RATES
     model_key = model if model in rates else "claude-3-5-sonnet-20241022"
     rate = rates[model_key]
-    return (input_tokens * rate["input"]) + (output_tokens * rate["output"])
+    return (input_tokens * (rate["input"] / 1_000_000)) + (output_tokens * (rate["output"] / 1_000_000))
 
 async def calculate_monthly_spend(db: AsyncSession, company_id: int, agent_id: int) -> Tuple[float, float]:
     """Calculates month-to-date spending for the agent and company."""
@@ -92,6 +92,9 @@ class AgentExecutor:
         if not agent or not company or not task:
             raise ValueError("Invalid agent, company, or task ID.")
 
+        if agent.company_id != company.id or task.company_id != company.id:
+            raise ValueError("Cross-tenant execution attempt detected!")
+
         if agent.status != "active":
             return f"Agent {agent.name} is not active (status: {agent.status})."
 
@@ -122,47 +125,91 @@ class AgentExecutor:
             return "Anthropic Claude API Key not configured."
 
         # 4. Atomic Checkout (locking task)
-        task.status = "in_progress"
-        task.locked_at = datetime.utcnow()
-        await self.db.commit()
+        async with _checkout_lock:
+            if self.task_id in _active_tasks:
+                return "Task already running."
 
-        # Create execution Run
-        run = Run(
-            task_id=self.task_id,
-            agent_id=self.agent_id,
-            status="running",
-            started_at=datetime.utcnow()
-        )
-        self.db.add(run)
-        await self.db.commit()
-        await self.db.refresh(run)
+            # Reset transaction snapshot to read latest committed data
+            await self.db.rollback()
 
-        await manager.broadcast_to_company(self.company_id, {
-            "type": "run_status", "run_id": run.id, "task_id": self.task_id, "status": "running"
-        })
+            stmt = select(Task).filter(Task.id == self.task_id)
+            if "postgresql" in settings.DATABASE_URL:
+                stmt = stmt.with_for_update()
 
-        client = AsyncAnthropic(api_key=api_key)
-        iteration = 0
-        messages = []
-        final_answer = ""
-        paused_for_approval = False
+            result = await self.db.execute(stmt)
+            task_to_claim = result.scalars().first()
+            if not task_to_claim:
+                return "Task not found."
 
-        system_prompt = (
-            f"You are {agent.name}, holding the title '{agent.title}'.\n"
-            f"Your role prompt details are:\n{agent.role_prompt}\n\n"
-            f"You belong to company '{company.name}', whose main MISSION is:\n{company.mission}\n\n"
-            f"CRITICAL: You are currently working on task: '{task.title}' ({task.description}).\n"
-            f"You must use tools at your disposal to complete the task. Call tools as needed. "
-            f"When done, write a final clear message to complete the task."
-        )
+            if task_to_claim.status in ["done", "failed", "paused"]:
+                return f"Task is already {task_to_claim.status}."
 
-        # Build tools list for API call
-        claude_tools = self._build_claude_tools(agent.tools)
+            # Check if there is an active run for this task
+            active_run_stmt = select(Run).filter(Run.task_id == self.task_id, Run.status == "running")
+            active_run_result = await self.db.execute(active_run_stmt)
+            active_run = active_run_result.scalars().first()
+            if active_run:
+                logger.info(f"Task {self.task_id} already has a running execution (Run ID {active_run.id}). Skipping.")
+                return "Task already running."
 
-        user_message = f"Please proceed with the task: '{task.title}'."
-        messages.append({"role": "user", "content": user_message})
+            # Mark as in_progress if it was todo
+            if task_to_claim.status == "todo":
+                task_to_claim.status = "in_progress"
+                task_to_claim.locked_at = datetime.now(timezone.utc)
+                self.db.add(task_to_claim)
 
+            task = task_to_claim
+
+            # Re-fetch agent and company to ensure they are loaded in this transaction session without lazy loading
+            agent = await self.db.get(Agent, self.agent_id)
+            company = await self.db.get(Company, self.company_id)
+
+            # Create execution Run
+            run = Run(
+                task_id=self.task_id,
+                agent_id=self.agent_id,
+                status="running",
+                started_at=datetime.now(timezone.utc)
+            )
+            self.db.add(run)
+            await self.db.commit()
+            await self.db.refresh(run)
+
+            # Add to active tasks set
+            _active_tasks.add(self.task_id)
+
+        token = None
         try:
+            await manager.broadcast_to_company(self.company_id, {
+                "type": "run_status", "run_id": run.id, "task_id": self.task_id, "status": "running"
+            })
+
+            client = AsyncAnthropic(api_key=api_key)
+            iteration = 0
+            messages = []
+            final_answer = ""
+            paused_for_approval = False
+
+            system_prompt = (
+                f"You are {agent.name}, holding the title '{agent.title}'.\n"
+                f"Your role prompt details are:\n{agent.role_prompt}\n\n"
+                f"You belong to company '{company.name}', whose main MISSION is:\n{company.mission}\n\n"
+                f"CRITICAL: You are currently working on task: '{task.title}' ({task.description}).\n"
+                f"You must use tools at your disposal to complete the task. Call tools as needed. "
+                f"When done, write a final clear message to complete the task."
+            )
+
+            # Build tools list for API call
+            claude_tools = self._build_claude_tools(agent.tools)
+
+            user_message = f"Please proceed with the task: '{task.title}'."
+            messages.append({"role": "user", "content": user_message})
+
+            token = execution_context.set({
+                "run_id": run.id,
+                "company_id": self.company_id,
+                "agent_id": self.agent_id
+            })
             while iteration < MAX_ITERATIONS:
                 iteration += 1
                 logger.info(f"Agent {agent.name} loop step {iteration}")
@@ -213,6 +260,11 @@ class AgentExecutor:
                 await manager.broadcast_to_company(self.company_id, {
                     "type": "run_step", "run_id": run.id, "kind": "llm_call", "cost": cost, "latency": latency
                 })
+
+                # Check budget limits in-loop
+                budget_status = await self._check_budget_in_loop(agent, company, run, task)
+                if budget_status:
+                    return budget_status
 
                 # Check content for tool use
                 tool_calls = [c for c in response.content if c.type == "tool_use"]
@@ -360,6 +412,39 @@ class AgentExecutor:
                 "type": "run_status", "run_id": run.id, "task_id": self.task_id, "status": "failed"
             })
             return f"Execution error: {str(e)}"
+        finally:
+            if token:
+                execution_context.reset(token)
+            _active_tasks.discard(self.task_id)
+
+    async def _check_budget_in_loop(self, agent, company, run, task) -> Optional[str]:
+        """Checks monthly spend during the execution loop and pauses execution if budget is exceeded."""
+        agent_spend, company_spend = await calculate_monthly_spend(self.db, self.company_id, self.agent_id)
+        if agent_spend >= agent.monthly_budget_usd or company_spend >= company.monthly_budget_usd:
+            run.status = "paused"
+            task.status = "paused"
+            task.locked_at = None
+            
+            if agent_spend >= agent.monthly_budget_usd:
+                agent.status = "exhausted"
+                audit_action = "PAUSED_BUDGET_EXHAUSTED"
+                audit_payload = {"agent_spend": agent_spend, "limit": agent.monthly_budget_usd}
+                alert_payload = {"type": "budget_alert", "agent_id": agent.id, "reason": "agent_limit"}
+                ret_msg = "Agent monthly budget limit exceeded."
+            else:
+                audit_action = "COMPANY_BUDGET_EXHAUSTED"
+                audit_payload = {"company_spend": company_spend, "limit": company.monthly_budget_usd}
+                alert_payload = {"type": "budget_alert", "reason": "company_limit"}
+                ret_msg = "Company monthly budget limit exceeded."
+                
+            await self.db.commit()
+            await create_audit_entry(self.db, self.company_id, "system", audit_action, audit_payload)
+            await manager.broadcast_to_company(self.company_id, alert_payload)
+            await manager.broadcast_to_company(self.company_id, {
+                "type": "run_status", "run_id": run.id, "task_id": self.task_id, "status": "paused"
+            })
+            return ret_msg
+        return None
 
     async def resume_run(self, approval_id: int) -> str:
         """Resumes a paused run once the board approval decision is registered."""
@@ -377,6 +462,12 @@ class AgentExecutor:
         agent = await self.db.get(Agent, self.agent_id)
         task = await self.db.get(Task, self.task_id)
         company = await self.db.get(Company, self.company_id)
+
+        if not agent or not company or not task:
+            raise ValueError("Invalid agent, company, or task ID.")
+
+        if agent.company_id != company.id or task.company_id != company.id or approval.company_id != company.id:
+            raise ValueError("Cross-tenant execution attempt detected!")
 
         # Set task & run back to running
         run.status = "running"
@@ -472,6 +563,11 @@ class AgentExecutor:
         )
         claude_tools = self._build_claude_tools(agent.tools)
 
+        token = execution_context.set({
+            "run_id": run.id,
+            "company_id": self.company_id,
+            "agent_id": self.agent_id
+        })
         try:
             while iteration < MAX_ITERATIONS:
                 iteration += 1
@@ -521,6 +617,11 @@ class AgentExecutor:
                 await manager.broadcast_to_company(self.company_id, {
                     "type": "run_step", "run_id": run.id, "kind": "llm_call", "cost": cost, "latency": latency
                 })
+
+                # Check budget limits in-loop
+                budget_status = await self._check_budget_in_loop(agent, company, run, task)
+                if budget_status:
+                    return budget_status
 
                 tool_calls = [c for c in response.content if c.type == "tool_use"]
                 text_content = " ".join([c.text for c in response.content if c.type == "text"])
@@ -656,13 +757,65 @@ class AgentExecutor:
                 "type": "run_status", "run_id": run.id, "task_id": self.task_id, "status": "failed"
             })
             return f"Execution error: {str(e)}"
+        finally:
+            execution_context.reset(token)
 
     async def _messages_create(self, client, api_params, api_key, agent, task, messages) -> Any:
-        """Calls the Anthropic API, or returns a mock message response if using a mock key."""
+        """Calls the Anthropic API, or returns a mock message response if using a mock key.
+        Includes timeout, retry and exponential backoff for transient errors (429/5xx).
+        """
         if api_key == "your_anthropic_api_key_here" or api_key.lower().startswith("mock"):
             return await self._get_mock_llm_response(agent, task, messages)
-        else:
-            return await client.messages.create(**api_params)
+
+        import asyncio
+        import random
+        from anthropic import (
+            RateLimitError,
+            InternalServerError,
+            APITimeoutError,
+            APIConnectionError,
+            APIStatusError
+        )
+
+        max_retries = 5
+        initial_delay = 1.0
+        factor = 2.0
+
+        for attempt in range(max_retries + 1):
+            try:
+                # Call Anthropic API with 30s timeout
+                return await asyncio.wait_for(
+                    client.messages.create(**api_params),
+                    timeout=30.0
+                )
+            except (RateLimitError, InternalServerError, APITimeoutError, APIConnectionError) as e:
+                if attempt == max_retries:
+                    logger.error(f"Anthropic API failed after {max_retries} retries with transient error: {e}")
+                    raise
+                delay = initial_delay * (factor ** attempt) + random.uniform(0.1, 1.0)
+                logger.warning(f"Anthropic API transient error: {e}. Retrying in {delay:.2f}s (attempt {attempt + 1}/{max_retries})...")
+                await asyncio.sleep(delay)
+            except APIStatusError as e:
+                # Retry on 429 or 5xx status codes
+                is_transient = e.status_code == 429 or e.status_code >= 500
+                if is_transient and attempt < max_retries:
+                    delay = initial_delay * (factor ** attempt) + random.uniform(0.1, 1.0)
+                    logger.warning(f"Anthropic API status {e.status_code}: {e}. Retrying in {delay:.2f}s (attempt {attempt + 1}/{max_retries})...")
+                    await asyncio.sleep(delay)
+                else:
+                    logger.error(f"Anthropic API failed with permanent status {e.status_code}: {e}")
+                    raise
+            except asyncio.TimeoutError as e:
+                if attempt == max_retries:
+                    logger.error(f"Anthropic API call timed out after {max_retries} retries.")
+                    raise
+                delay = initial_delay * (factor ** attempt) + random.uniform(0.1, 1.0)
+                logger.warning(f"Anthropic API request timed out. Retrying in {delay:.2f}s (attempt {attempt + 1}/{max_retries})...")
+                await asyncio.sleep(delay)
+            except Exception as e:
+                # Permanent failure
+                logger.error(f"Anthropic API failed with unexpected exception: {e}")
+                raise
 
     async def _get_mock_llm_response(self, agent, task, messages) -> Any:
         """Simulates agent decisions and tool invocations step-by-step for local testing without APIs."""
@@ -927,6 +1080,35 @@ class AgentExecutor:
 
         if not title or not description or not assignee_agent_id:
             return "Error: Missing delegation arguments."
+
+        try:
+            assignee_agent_id = int(assignee_agent_id)
+        except (ValueError, TypeError):
+            return "Error: Invalid assignee_agent_id."
+
+        # Cycle check: self-delegation
+        if assignee_agent_id == self.agent_id:
+            return "Error: Circular delegation detected. An agent cannot delegate a task to themselves."
+
+        # Verify delegation depth and cycles by walking up the task hierarchy
+        current_depth = 1
+        parent_id = self.task_id
+        while parent_id is not None:
+            stmt = select(Task).filter(Task.id == parent_id)
+            res = await self.db.execute(stmt)
+            parent_task = res.scalars().first()
+            if not parent_task:
+                break
+            
+            current_depth += 1
+            if current_depth > settings.MAX_DELEGATION_DEPTH:
+                return f"Error: Maximum delegation depth of {settings.MAX_DELEGATION_DEPTH} exceeded."
+
+            if parent_task.assignee_agent_id:
+                if int(parent_task.assignee_agent_id) == assignee_agent_id:
+                    return f"Error: Circular delegation detected. Agent {assignee_agent_id} is already in the parent delegation chain."
+            
+            parent_id = parent_task.parent_task_id
 
         # Create child task
         child_task = Task(

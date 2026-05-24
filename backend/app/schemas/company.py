@@ -1,12 +1,12 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional
 
 class CompanyBase(BaseModel):
     name: str
     mission: str
-    monthly_budget_usd: Optional[float] = 100.0
-    markup_pct: Optional[float] = 20.0 # 20% markup by default
+    monthly_budget_usd: Optional[float] = Field(default=100.0, gt=0.0)
+    markup_pct: Optional[float] = Field(default=20.0, ge=0.0) # 20% markup by default
 
 class CompanyCreate(CompanyBase):
     pass
@@ -14,8 +14,8 @@ class CompanyCreate(CompanyBase):
 class CompanyUpdate(BaseModel):
     name: Optional[str] = None
     mission: Optional[str] = None
-    monthly_budget_usd: Optional[float] = None
-    markup_pct: Optional[float] = None
+    monthly_budget_usd: Optional[float] = Field(default=None, gt=0.0)
+    markup_pct: Optional[float] = Field(default=None, ge=0.0)
 
 class CompanyResponse(CompanyBase):
     id: int

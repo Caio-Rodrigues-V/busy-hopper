@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 from app.core.database import Base
 
 class Agent(Base):
@@ -19,7 +19,7 @@ class Agent(Base):
     monthly_budget_usd = Column(Float, default=50.0)
     status = Column(String, default="active") # active, paused, exhausted
     heartbeat_cron = Column(String, nullable=True) # cron string (e.g. "*/5 * * * *")
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     company = relationship("Company", back_populates="agents")
     # Self-referencing boss-subordinate relation

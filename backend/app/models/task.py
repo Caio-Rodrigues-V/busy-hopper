@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 from app.core.database import Base
 
 class Task(Base):
@@ -14,8 +14,8 @@ class Task(Base):
     assignee_agent_id = Column(Integer, ForeignKey("agents.id", ondelete="SET NULL"), nullable=True)
     parent_task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=True)
     traces_to_goal = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    locked_at = Column(DateTime, nullable=True) # Used for atomic checkout
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    locked_at = Column(DateTime(timezone=True), nullable=True) # Used for atomic checkout
 
     company = relationship("Company", back_populates="tasks")
     assignee = relationship("Agent", back_populates="tasks")

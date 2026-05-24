@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 from app.core.database import Base
 
 class Run(Base):
@@ -12,8 +12,8 @@ class Run(Base):
     status = Column(String, default="running") # "running", "success", "failed", "paused"
     total_tokens = Column(Integer, default=0)
     total_cost_usd = Column(Float, default=0.0)
-    started_at = Column(DateTime, default=datetime.utcnow)
-    finished_at = Column(DateTime, nullable=True)
+    started_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    finished_at = Column(DateTime(timezone=True), nullable=True)
 
     task = relationship("Task", back_populates="runs")
     agent = relationship("Agent", back_populates="runs")
@@ -30,6 +30,6 @@ class RunStep(Base):
     tokens = Column(Integer, default=0)
     cost_usd = Column(Float, default=0.0)
     latency_ms = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     run = relationship("Run", back_populates="steps")

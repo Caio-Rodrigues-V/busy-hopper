@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects.postgresql import JSONB
 
 
 # revision identifiers, used by Alembic.
@@ -25,7 +26,7 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('email', sa.String(), nullable=False),
     sa.Column('password_hash', sa.String(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
@@ -37,7 +38,7 @@ def upgrade() -> None:
     sa.Column('mission', sa.String(), nullable=False),
     sa.Column('monthly_budget_usd', sa.Float(), nullable=True),
     sa.Column('markup_pct', sa.Float(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
@@ -52,11 +53,11 @@ def upgrade() -> None:
     sa.Column('adapter_type', sa.String(), nullable=False),
     sa.Column('model', sa.String(), nullable=False),
     sa.Column('temperature', sa.Float(), nullable=True),
-    sa.Column('tools', sa.JSON(), nullable=False),
+    sa.Column('tools', sa.JSON().with_variant(JSONB(), 'postgresql'), nullable=False),
     sa.Column('monthly_budget_usd', sa.Float(), nullable=True),
     sa.Column('status', sa.String(), nullable=True),
     sa.Column('heartbeat_cron', sa.String(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['boss_agent_id'], ['agents.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['company_id'], ['companies.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
@@ -68,7 +69,7 @@ def upgrade() -> None:
     sa.Column('provider', sa.String(), nullable=False),
     sa.Column('encrypted_key', sa.String(), nullable=False),
     sa.Column('last4', sa.String(length=4), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['company_id'], ['companies.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
@@ -77,11 +78,11 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('company_id', sa.Integer(), nullable=False),
     sa.Column('action_type', sa.String(), nullable=False),
-    sa.Column('payload', sa.JSON(), nullable=False),
+    sa.Column('payload', sa.JSON().with_variant(JSONB(), 'postgresql'), nullable=False),
     sa.Column('status', sa.String(), nullable=True),
     sa.Column('decided_by', sa.Integer(), nullable=True),
-    sa.Column('decided_at', sa.DateTime(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('decided_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['company_id'], ['companies.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['decided_by'], ['users.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id')
@@ -92,8 +93,8 @@ def upgrade() -> None:
     sa.Column('company_id', sa.Integer(), nullable=False),
     sa.Column('actor', sa.String(), nullable=False),
     sa.Column('action', sa.String(), nullable=False),
-    sa.Column('payload', sa.JSON(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('payload', sa.JSON().with_variant(JSONB(), 'postgresql'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['company_id'], ['companies.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
@@ -107,8 +108,8 @@ def upgrade() -> None:
     sa.Column('assignee_agent_id', sa.Integer(), nullable=True),
     sa.Column('parent_task_id', sa.Integer(), nullable=True),
     sa.Column('traces_to_goal', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.Column('locked_at', sa.DateTime(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('locked_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['assignee_agent_id'], ['agents.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['company_id'], ['companies.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['parent_task_id'], ['tasks.id'], ondelete='CASCADE'),
@@ -122,8 +123,8 @@ def upgrade() -> None:
     sa.Column('status', sa.String(), nullable=True),
     sa.Column('total_tokens', sa.Integer(), nullable=True),
     sa.Column('total_cost_usd', sa.Float(), nullable=True),
-    sa.Column('started_at', sa.DateTime(), nullable=True),
-    sa.Column('finished_at', sa.DateTime(), nullable=True),
+    sa.Column('started_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('finished_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['agent_id'], ['agents.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['task_id'], ['tasks.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
@@ -133,12 +134,12 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('run_id', sa.Integer(), nullable=False),
     sa.Column('kind', sa.String(), nullable=False),
-    sa.Column('input', sa.JSON(), nullable=True),
-    sa.Column('output', sa.JSON(), nullable=True),
+    sa.Column('input', sa.JSON().with_variant(JSONB(), 'postgresql'), nullable=True),
+    sa.Column('output', sa.JSON().with_variant(JSONB(), 'postgresql'), nullable=True),
     sa.Column('tokens', sa.Integer(), nullable=True),
     sa.Column('cost_usd', sa.Float(), nullable=True),
     sa.Column('latency_ms', sa.Integer(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['run_id'], ['runs.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )

@@ -33,8 +33,9 @@ async def create_agent(
 ):
     # Verify boss reporting line validity
     if agent_in.boss_agent_id:
-        boss = await db.get(Agent, agent_in.boss_agent_id)
-        if not boss or boss.company_id != company.id:
+        boss_res = await db.execute(select(Agent).filter(Agent.id == agent_in.boss_agent_id, Agent.company_id == company.id))
+        boss = boss_res.scalars().first()
+        if not boss:
             raise HTTPException(status_code=400, detail="Invalid boss agent (must belong to the same company).")
 
     new_agent = Agent(
@@ -67,8 +68,9 @@ async def get_agent(
     db: AsyncSession = Depends(get_db),
     company: Company = Depends(get_current_company)
 ):
-    agent = await db.get(Agent, agent_id)
-    if not agent or agent.company_id != company.id:
+    res = await db.execute(select(Agent).filter(Agent.id == agent_id, Agent.company_id == company.id))
+    agent = res.scalars().first()
+    if not agent:
         raise HTTPException(status_code=404, detail="Agent not found.")
     return agent
 
@@ -80,16 +82,18 @@ async def update_agent(
     company: Company = Depends(get_current_company),
     current_user: User = Depends(get_current_user)
 ):
-    agent = await db.get(Agent, agent_id)
-    if not agent or agent.company_id != company.id:
+    res = await db.execute(select(Agent).filter(Agent.id == agent_id, Agent.company_id == company.id))
+    agent = res.scalars().first()
+    if not agent:
         raise HTTPException(status_code=404, detail="Agent not found.")
         
     # Verify hierarchies
     if agent_in.boss_agent_id:
         if agent_in.boss_agent_id == agent.id:
             raise HTTPException(status_code=400, detail="An agent cannot report to themselves.")
-        boss = await db.get(Agent, agent_in.boss_agent_id)
-        if not boss or boss.company_id != company.id:
+        boss_res = await db.execute(select(Agent).filter(Agent.id == agent_in.boss_agent_id, Agent.company_id == company.id))
+        boss = boss_res.scalars().first()
+        if not boss:
             raise HTTPException(status_code=400, detail="Invalid boss agent ID.")
 
     for field, val in agent_in.model_dump(exclude_unset=True).items():
@@ -111,8 +115,9 @@ async def delete_agent(
     company: Company = Depends(get_current_company),
     current_user: User = Depends(get_current_user)
 ):
-    agent = await db.get(Agent, agent_id)
-    if not agent or agent.company_id != company.id:
+    res = await db.execute(select(Agent).filter(Agent.id == agent_id, Agent.company_id == company.id))
+    agent = res.scalars().first()
+    if not agent:
         raise HTTPException(status_code=404, detail="Agent not found.")
         
     await db.delete(agent)
@@ -131,8 +136,9 @@ async def list_agent_artifacts(
     company: Company = Depends(get_current_company)
 ):
     # 1. Verify agent ownership
-    agent = await db.get(Agent, agent_id)
-    if not agent or agent.company_id != company.id:
+    res = await db.execute(select(Agent).filter(Agent.id == agent_id, Agent.company_id == company.id))
+    agent = res.scalars().first()
+    if not agent:
         raise HTTPException(status_code=404, detail="Agent not found.")
         
     # 2. Get all run IDs of this agent
@@ -201,8 +207,9 @@ async def get_agent_artifact(
     company: Company = Depends(get_current_company)
 ):
     # 1. Verify agent ownership
-    agent = await db.get(Agent, agent_id)
-    if not agent or agent.company_id != company.id:
+    res = await db.execute(select(Agent).filter(Agent.id == agent_id, Agent.company_id == company.id))
+    agent = res.scalars().first()
+    if not agent:
         raise HTTPException(status_code=404, detail="Agent not found.")
         
     # 2. Prevent directory traversal

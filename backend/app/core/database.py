@@ -2,15 +2,27 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from sqlalchemy.orm import DeclarativeBase
 from app.core.config import settings
 
-# If sqlite is used, handle threading parameters
-connect_args = {}
-if settings.DATABASE_URL.startswith("sqlite"):
-    connect_args = {"check_same_thread": False}
+# Configure engine based on dialect
+engine_kwargs = {
+    "echo": False
+}
+
+if "postgresql" in settings.DATABASE_URL:
+    engine_kwargs["connect_args"] = {
+        "statement_cache_size": 0,
+        "prepared_statement_cache_size": 0
+    }
+    engine_kwargs["pool_size"] = 10
+    engine_kwargs["max_overflow"] = 5
+    engine_kwargs["pool_pre_ping"] = True
+elif "sqlite" in settings.DATABASE_URL:
+    engine_kwargs["connect_args"] = {
+        "check_same_thread": False
+    }
 
 engine = create_async_engine(
     settings.DATABASE_URL,
-    connect_args=connect_args,
-    echo=False
+    **engine_kwargs
 )
 
 SessionLocal = async_sessionmaker(

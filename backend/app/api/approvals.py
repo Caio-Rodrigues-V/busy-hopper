@@ -47,8 +47,9 @@ async def decide_approval(
     company: Company = Depends(get_current_company),
     current_user: User = Depends(get_current_user)
 ):
-    approval = await db.get(Approval, approval_id)
-    if not approval or approval.company_id != company.id:
+    res = await db.execute(select(Approval).filter(Approval.id == approval_id, Approval.company_id == company.id))
+    approval = res.scalars().first()
+    if not approval:
         raise HTTPException(status_code=404, detail="Approval request not found.")
         
     if approval.status != "pending":
@@ -75,6 +76,12 @@ async def decide_approval(
     agent_id = payload.get("agent_id")
     
     if decision == "approved" and task_id and agent_id:
+        # Validate that the task and agent in the payload belong to the same company
+        task_check = await db.execute(select(Task).filter(Task.id == task_id, Task.company_id == company.id))
+        agent_check = await db.execute(select(Agent).filter(Agent.id == agent_id, Agent.company_id == company.id))
+        if not task_check.scalars().first() or not agent_check.scalars().first():
+            raise HTTPException(status_code=400, detail="Invalid approval payload: Agent or Task does not belong to this company.")
+
         logger.info(f"Approvals: Resuming task {task_id} run for Agent {agent_id} in background.")
         background_tasks.add_task(background_resume_run, company.id, agent_id, task_id, approval.id)
         

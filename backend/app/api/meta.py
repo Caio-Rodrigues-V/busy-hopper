@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import os
 import json
 import time
@@ -27,7 +27,7 @@ class MetaConfigSchema(BaseModel):
 class MetaCampaignSchema(BaseModel):
     campaign_name: str
     objective: str
-    daily_budget_usd: float
+    daily_budget_usd: float = Field(gt=0)
 
 @router.get("/config")
 async def get_meta_config(
