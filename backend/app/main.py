@@ -21,6 +21,37 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # 1. Run database migrations programmatically on startup
+    try:
+        logger.info("Running database migrations programmatically...")
+        import os
+        from alembic.config import Config
+        from alembic import command
+        import asyncio
+
+        def run_migrations():
+            backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            ini_path = os.path.join(backend_dir, "alembic.ini")
+            alembic_cfg = Config(ini_path)
+            script_location = os.path.join(backend_dir, "alembic")
+            alembic_cfg.set_main_option("script_location", script_location)
+            alembic_cfg.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+            command.upgrade(alembic_cfg, "head")
+
+        await asyncio.to_thread(run_migrations)
+        logger.info("Database migrations completed successfully.")
+    except Exception as e:
+        logger.error(f"Failed to run database migrations: {e}")
+
+    # 2. Run database prepopulation/seeding programmatically
+    try:
+        logger.info("Running database seeding programmatically...")
+        from app.database_prepop import main as seed_db
+        await seed_db()
+        logger.info("Database seeding completed.")
+    except Exception as e:
+        logger.error(f"Failed to seed database: {e}")
+
     # Startup: Start APScheduler agent heartbeats
     start_scheduler()
     yield

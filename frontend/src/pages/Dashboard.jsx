@@ -40,9 +40,15 @@ export default function Dashboard() {
   }, []);
 
   const fetchMetrics = async () => {
+    const companyId = localStorage.getItem("companyId");
+    if (!companyId) {
+      setLoading(false);
+      return;
+    }
     try {
       const res = await dashboardAPI.getMetrics();
       setMetrics(res.data);
+      setError("");
     } catch (err) {
       console.error(err);
       setError("Failed to retrieve dashboard metrics.");
@@ -50,6 +56,18 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
+
+  if (!localStorage.getItem("companyId")) {
+    return (
+      <div className="h-96 flex flex-col items-center justify-center gap-3 text-dark-muted p-6 border border-dashed border-dark-border rounded-2xl bg-dark-card/20">
+        <Loader2 size={32} className="animate-spin text-brand-primary" />
+        <span className="text-center font-medium">Waiting for enterprise selection or onboarding...</span>
+        <p className="text-xs text-dark-muted text-center max-w-sm">
+          Please select or establish a company in the sidebar to load the corporate analytics control plane.
+        </p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
