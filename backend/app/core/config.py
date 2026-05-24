@@ -45,13 +45,15 @@ class Settings(BaseSettings):
     def model_post_init(self, __context):
         import sys
         is_test = "pytest" in sys.modules or os.getenv("ENV") == "test"
+        is_migration = "alembic" in sys.modules or any("alembic" in arg for arg in sys.argv)
 
-        if is_test:
+        if is_test or is_migration:
             if not self.SECRET_KEY:
                 self.SECRET_KEY = "test_secret_key_jwt_dev_only_not_secure_12345"
             if not self.ENCRYPTION_KEY:
                 self.ENCRYPTION_KEY = "8lqWc_wA-p5HcrgC5lV4TfV3r4f7h9L3t9u3j2m1G4c="
-            self.DATABASE_URL = "sqlite+aiosqlite:///./test_temp.db"
+            if is_test:
+                self.DATABASE_URL = "sqlite+aiosqlite:///./test_temp.db"
         else:
             if not self.SECRET_KEY:
                 raise ValueError("CRITICAL SECURITY ERROR: SECRET_KEY must be configured in environment!")
