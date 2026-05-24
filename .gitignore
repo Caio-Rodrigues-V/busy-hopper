@@ -1,0 +1,36 @@
+# Databases & Local storage
+*.db
+*.sqlite
+*.sqlite3
+workspace/
+
+# Python Virtual Environments & Caches
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node / Frontend Build
+node_modules/
+dist/
+.eslintcache
+.rolldown/
+
+# Env Configs & Secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.key
+
+# Editor / System files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.gemini/
