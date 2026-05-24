@@ -14,18 +14,30 @@ from app.models.agent import Agent
 
 async def main():
     async with SessionLocal() as db:
+        # Check if running in production
+        is_production = os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("ENV") == "production"
+        admin_email = os.getenv("ADMIN_EMAIL", "admin@autonomous.corp")
+        admin_password = os.getenv("ADMIN_PASSWORD")
+        
+        # If in production and no password is set, skip default admin seeding for safety
+        if is_production and not admin_password:
+            print("[Warning] Skipping database seeding: ADMIN_PASSWORD is not set in production.")
+            return
+
+        password = admin_password or "password123"
+
         # 1. Create Default User
-        result = await db.execute(select(User).filter(User.email == "admin@autonomous.corp"))
+        result = await db.execute(select(User).filter(User.email == admin_email))
         user = result.scalars().first()
         if not user:
             user = User(
-                email="admin@autonomous.corp",
-                password_hash=get_password_hash("password123")
+                email=admin_email,
+                password_hash=get_password_hash(password)
             )
             db.add(user)
             await db.commit()
             await db.refresh(user)
-            print("Created default user: admin@autonomous.corp (password: password123)")
+            print(f"Created default user: {admin_email} (password: {'[SECURED]' if is_production else password})")
         else:
             print("Default user already exists.")
             

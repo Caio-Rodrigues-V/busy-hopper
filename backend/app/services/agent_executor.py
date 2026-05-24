@@ -2,6 +2,7 @@ import logging
 import os
 import subprocess
 import time
+import json
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
 from sqlalchemy import select, func
@@ -375,6 +376,7 @@ class AgentExecutor:
         # Fetch models
         agent = await self.db.get(Agent, self.agent_id)
         task = await self.db.get(Task, self.task_id)
+        company = await self.db.get(Company, self.company_id)
 
         # Set task & run back to running
         run.status = "running"
@@ -464,7 +466,7 @@ class AgentExecutor:
         system_prompt = (
             f"You are {agent.name}, holding the title '{agent.title}'.\n"
             f"Your role prompt details are:\n{agent.role_prompt}\n\n"
-            f"You belong to company, whose main MISSION is:\n"
+            f"You belong to company '{company.name}', whose main MISSION is:\n{company.mission}\n\n"
             f"CRITICAL: You are currently working on task: '{task.title}' ({task.description}).\n"
             f"Resume your execution after receiving the board's decision."
         )
@@ -1028,6 +1030,15 @@ class AgentExecutor:
         if not command:
             return "Error: Empty command."
         
+        # Prevent command injection/path traversal outside the sandbox
+        if ".." in command:
+            return "Error: Command execution blocked. Path traversal ('..') detected."
+            
+        # Prevent command chaining or subshell execution
+        for token in [";", "&&", "||", "|", "`", "$("]:
+            if token in command:
+                return f"Error: Command execution blocked. Command chaining or injection token '{token}' is forbidden."
+        
         logger.info(f"Executing approved bash command: {command}")
         try:
             # Execute command with a timeout
@@ -1076,7 +1087,6 @@ class AgentExecutor:
                 pass
 
         # Write campaign metadata inside workspace directory
-        import json
         filename = f"meta_campaign_{int(time.time())}.json"
         clean_filename = os.path.basename(filename)
         target_path = os.path.abspath(os.path.join(self.workspace_dir, clean_filename))

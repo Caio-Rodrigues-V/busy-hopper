@@ -30,6 +30,14 @@ class Settings(BaseSettings):
         extra = "ignore"
 
     def model_post_init(self, __context):
+        # Enforce secure keys in production
+        is_production = os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("ENV") == "production"
+        if is_production:
+            if self.SECRET_KEY == "super_secret_jwt_key_for_local_dev_change_me_in_production_12345":
+                raise ValueError("CRITICAL SECURITY ERROR: SECRET_KEY must be overridden in production!")
+            if self.ENCRYPTION_KEY == "8lqWc_wA-p5HcrgC5lV4TfV3r4f7h9L3t9u3j2m1G4c=":
+                raise ValueError("CRITICAL SECURITY ERROR: ENCRYPTION_KEY must be overridden in production!")
+
         # Resolve relative SQLite path to absolute path relative to the backend root directory
         if self.DATABASE_URL.startswith("sqlite+aiosqlite:///./"):
             backend_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

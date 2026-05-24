@@ -49,12 +49,12 @@ async def get_company(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    result = await db.execute(select(Company).filter(Company.id == company_id))
+    result = await db.execute(
+        select(Company).filter(Company.id == company_id, Company.user_id == current_user.id)
+    )
     company = result.scalars().first()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
-    if company.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Forbidden. Access denied.")
     return company
 
 @router.put("/{company_id}", response_model=CompanyResponse)
@@ -64,12 +64,12 @@ async def update_company(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    result = await db.execute(select(Company).filter(Company.id == company_id))
+    result = await db.execute(
+        select(Company).filter(Company.id == company_id, Company.user_id == current_user.id)
+    )
     company = result.scalars().first()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
-    if company.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Forbidden. Access denied.")
         
     for field, val in company_in.model_dump(exclude_unset=True).items():
         setattr(company, field, val)

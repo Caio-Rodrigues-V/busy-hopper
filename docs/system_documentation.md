@@ -179,7 +179,7 @@ A experiência interativa e viva do painel é assegurada por conexões bidirecio
 
 ### Mecanismos de Funcionamento e Segurança:
 1. **Autenticação Injetada em Query**: Como os navegadores não suportam o envio de cabeçalhos customizados na abertura de WebSockets padrão, o token JWT do usuário é passado diretamente na URL como parâmetro de consulta:
-   `ws://localhost:8000/api/tasks/ws?token=SUA_CHAVE_JWT`
+   `ws://localhost:8000/api/v1/ws/{company_id}?token=SUA_CHAVE_JWT`
 2. **Verificação de Tenant**: O backend decodifica o token no momento da conexão, descobre qual `company_id` pertence àquele usuário, e adiciona a conexão WebSocket a um canal exclusivo daquela empresa. Isso garante que nenhum usuário veja logs de tarefas de outras corporações.
 3. **Eventos Transmitidos**:
    - `task_updated`: Alteração de status da tarefa (ex: de `todo` para `in_progress`).
