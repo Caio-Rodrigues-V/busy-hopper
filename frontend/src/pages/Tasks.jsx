@@ -92,8 +92,10 @@ export default function Tasks() {
     if (!companyId || !isMountedRef.current) return;
 
     const token = localStorage.getItem("token");
-    // Use ws relative path with token parameter
-    const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+    const rawBackendUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+    const backendUrl = (rawBackendUrl.startsWith("http://") && !rawBackendUrl.includes("localhost") && !rawBackendUrl.includes("127.0.0.1"))
+      ? rawBackendUrl.replace("http://", "https://")
+      : rawBackendUrl;
     const wsProtocol = backendUrl.startsWith("https") ? "wss" : "ws";
     const wsHost = backendUrl.replace(/^https?:\/\//, "").replace(/\/$/, "");
     const wsUrl = `${wsProtocol}://${wsHost}/api/v1/ws/${companyId}${token ? `?token=${encodeURIComponent(token)}` : ""}`;
