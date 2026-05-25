@@ -90,9 +90,9 @@ async def debug_setup_run_campaign(db: AsyncSession = Depends(get_db)):
     from app.services.agent_executor import AgentExecutor
     from sqlalchemy import update
     
-    # 1. Update all company 6 agents to use gemini-1.5-flash
+    # 1. Update all company 6 agents to use gemini-flash-latest
     await db.execute(
-        update(Agent).filter(Agent.company_id == 6).values(model="gemini-1.5-flash")
+        update(Agent).filter(Agent.company_id == 6).values(model="gemini-flash-latest")
     )
     await db.commit()
     
