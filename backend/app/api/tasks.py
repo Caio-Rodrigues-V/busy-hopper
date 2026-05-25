@@ -82,6 +82,58 @@ async def debug_workspace():
                 
     return {"workspace_dir": workspace_dir, "files": files, "contents": contents}
 
+@router.get("/debug-setup-run-campaign")
+async def debug_setup_run_campaign(db: AsyncSession = Depends(get_db)):
+    import os
+    from app.models.task import Task
+    from app.services.agent_executor import AgentExecutor
+    
+    # 1. Ensure workspace directory exists
+    workspace_dir = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "workspace", "company_6")
+    )
+    os.makedirs(workspace_dir, exist_ok=True)
+    
+    # 2. Write briefing_campanha.txt
+    briefing_content = (
+        "Briefing da Campanha de Tráfego Pago:\n\n"
+        "Objetivo: Gerar leads qualificados para o nosso serviço de \"TIME DE TRAFEGO PAGO\".\n"
+        "Público-alvo: Empresas e empreendedores que buscam otimizar suas campanhas de tráfego pago e aumentar o ROI.\n"
+        "Dores do público: Baixo ROI em campanhas atuais, dificuldade em escalar, falta de tempo para gerenciar, complexidade das plataformas de anúncios.\n"
+        "Desejos do público: Campanhas de alta conversão, aumento de vendas, otimização de custos, equipe especializada para gerenciar o tráfego.\n"
+        "Oferta: Serviço de gestão de tráfego pago com foco em ROI positivo, utilizando inteligência artificial e um time de especialistas.\n"
+        "Chamada para Ação (CTA): \"Agende uma Consultoria Gratuita\", \"Saiba Mais\", \"Comece Agora\".\n"
+        "Gatilhos mentais a serem explorados: Escassez (vagas limitadas para consultoria), Autoridade (time de especialistas), Prova Social (cases de sucesso - a serem adicionados posteriormente).\n"
+    )
+    
+    with open(os.path.join(workspace_dir, "briefing_campanha.txt"), "w", encoding="utf-8") as f:
+        f.write(briefing_content)
+        
+    # 3. Reset Task 7 status to todo
+    task = await db.get(Task, 7)
+    if not task:
+        return {"error": "Task 7 not found"}
+    task.status = "todo"
+    task.locked_at = None
+    await db.commit()
+    
+    # 4. Run Task 7
+    try:
+        executor = AgentExecutor(db, company_id=6, agent_id=9, task_id=7)
+        result = await executor.execute_run()
+        
+        # List files in workspace after execution
+        files = os.listdir(workspace_dir)
+        return {
+            "status": "completed",
+            "result": result,
+            "workspace_files": files
+        }
+    except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        return {"status": "failed", "error": str(e), "traceback": tb}
+
 @router.get("/debug-run-7")
 async def debug_run_7(db: AsyncSession = Depends(get_db)):
     import traceback
