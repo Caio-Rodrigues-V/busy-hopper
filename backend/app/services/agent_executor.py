@@ -258,7 +258,7 @@ def parse_bedrock_response(response) -> AdapterResponse:
     return AdapterResponse(content=content_blocks, stop_reason=mapped_stop_reason, usage=usage)
 
 # Constants
-MAX_ITERATIONS = 10
+MAX_ITERATIONS = 30
 
 _checkout_lock = asyncio.Lock()
 _active_tasks = set()
