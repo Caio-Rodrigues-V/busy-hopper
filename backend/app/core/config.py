@@ -80,4 +80,18 @@ class Settings(BaseSettings):
         elif self.DATABASE_URL.startswith("postgres://"):
             self.DATABASE_URL = self.DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
 
+        # Resolve CORS origins from environment variable dynamically
+        cors_env = os.getenv("CORS_ORIGINS")
+        if cors_env:
+            if cors_env.strip() == "*":
+                self.CORS_ORIGINS = ["*"]
+            elif cors_env.startswith("[") and cors_env.endswith("]"):
+                import json
+                try:
+                    self.CORS_ORIGINS = json.loads(cors_env)
+                except Exception:
+                    self.CORS_ORIGINS = [origin.strip() for origin in cors_env.split(",") if origin.strip()]
+            else:
+                self.CORS_ORIGINS = [origin.strip() for origin in cors_env.split(",") if origin.strip()]
+
 settings = Settings()
