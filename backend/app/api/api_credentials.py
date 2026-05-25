@@ -131,16 +131,30 @@ async def validate_api_credential(provider: str, api_key: str):
                 raise Exception(f"Gemini API Error: {resp.text}")
     elif provider == "openrouter":
         import httpx
-        async with httpx.AsyncClient() as client:
-            headers = {"Authorization": f"Bearer {api_key}"}
-            payload = {
-                "model": "meta-llama/llama-3-8b-instruct:free",
-                "messages": [{"role": "user", "content": "ping"}],
-                "max_tokens": 1
-            }
-            resp = await client.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload, timeout=10.0)
-            if resp.status_code != 200:
-                raise Exception(f"OpenRouter API Error: {resp.text}")
+        models_to_try = [
+            "meta-llama/llama-3.1-8b-instruct:free",
+            "google/gemma-2-9b-it:free",
+            "mistralai/mistral-7b-instruct:free",
+            "meta-llama/llama-3-8b-instruct:free"
+        ]
+        headers = {"Authorization": f"Bearer {api_key}"}
+        last_resp_text = ""
+        for model in models_to_try:
+            try:
+                async with httpx.AsyncClient() as client:
+                    payload = {
+                        "model": model,
+                        "messages": [{"role": "user", "content": "ping"}],
+                        "max_tokens": 1
+                    }
+                    resp = await client.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload, timeout=10.0)
+                    if resp.status_code == 200:
+                        return
+                    else:
+                        last_resp_text = resp.text
+            except Exception as e:
+                last_resp_text = str(e)
+        raise Exception(f"OpenRouter API Error: {last_resp_text}")
     elif provider == "aws_bedrock":
         import json
         import boto3
