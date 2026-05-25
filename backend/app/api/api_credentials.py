@@ -190,11 +190,8 @@ async def validate_api_credential(provider: str, api_key: str):
                     return
                 except Exception as e:
                     last_err = e
-                    err_str = str(e)
-                    if "ResourceNotFoundException" in err_str or "access denied" in err_str.lower() or "not authorized" in err_str.lower():
-                        continue
-                    else:
-                        raise e
+                    # Try the next model if this specific model invocation fails (e.g. legacy, access denied, or throughput limitations)
+                    continue
             if last_err:
                 raise last_err
 
