@@ -147,6 +147,27 @@ async def debug_setup_run_campaign(db: AsyncSession = Depends(get_db)):
         tb = traceback.format_exc()
         return {"status": "failed", "error": str(e), "traceback": tb}
 
+@router.get("/debug-reset-all")
+async def debug_reset_all(db: AsyncSession = Depends(get_db)):
+    from app.services.agent_executor import _active_tasks
+    from app.models.run import Run
+    from app.models.task import Task
+    from sqlalchemy import update
+    
+    # 1. Clear memory locks
+    _active_tasks.clear()
+    
+    # 2. Reset database locks
+    await db.execute(
+        update(Run).filter(Run.status == "running").values(status="failed")
+    )
+    await db.execute(
+        update(Task).filter(Task.status == "in_progress").values(status="todo", locked_at=None)
+    )
+    await db.commit()
+    
+    return {"status": "success", "active_tasks_in_memory": list(_active_tasks)}
+
 @router.get("/debug-run-7")
 async def debug_run_7(db: AsyncSession = Depends(get_db)):
     import traceback
