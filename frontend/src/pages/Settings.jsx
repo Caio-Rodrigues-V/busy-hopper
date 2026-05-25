@@ -30,6 +30,10 @@ export default function Settings() {
   const [provider, setProvider] = useState("anthropic");
   const [apiKey, setApiKey] = useState("");
   const [submittingKey, setSubmittingKey] = useState(false);
+  const [awsAccessKeyId, setAwsAccessKeyId] = useState("");
+  const [awsSecretAccessKey, setAwsSecretAccessKey] = useState("");
+  const [awsRegion, setAwsRegion] = useState("us-east-1");
+  const [testingKey, setTestingKey] = useState(false);
 
   useEffect(() => {
     fetchSettingsData();
@@ -73,18 +77,69 @@ export default function Settings() {
     }
   };
 
+  const handleTestConnection = async () => {
+    let finalKey = apiKey;
+    if (provider === "aws_bedrock") {
+      if (!awsAccessKeyId || !awsSecretAccessKey) {
+        alert("Please fill in both AWS Access Key ID and Secret Access Key.");
+        return;
+      }
+      finalKey = JSON.stringify({
+        aws_access_key_id: awsAccessKeyId,
+        aws_secret_access_key: awsSecretAccessKey,
+        aws_region: awsRegion
+      });
+    } else {
+      if (!apiKey) {
+        alert("Please fill in the API Key.");
+        return;
+      }
+    }
+
+    setTestingKey(true);
+    try {
+      const res = await credentialAPI.validate(provider, finalKey);
+      if (res.data.valid) {
+        alert("Validation SUCCESS: API credentials are valid and connection was established!");
+      } else {
+        alert(`Validation FAILED: ${res.data.error}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.detail || "Validation failed due to connection error.");
+    } finally {
+      setTestingKey(false);
+    }
+  };
+
   const handleAddCredential = async (e) => {
     e.preventDefault();
-    if (!apiKey) return;
+    
+    let finalKey = apiKey;
+    if (provider === "aws_bedrock") {
+      if (!awsAccessKeyId || !awsSecretAccessKey) {
+        alert("AWS credentials are required for Bedrock.");
+        return;
+      }
+      finalKey = JSON.stringify({
+        aws_access_key_id: awsAccessKeyId,
+        aws_secret_access_key: awsSecretAccessKey,
+        aws_region: awsRegion
+      });
+    } else {
+      if (!apiKey) return;
+    }
+
     setSubmittingKey(true);
     try {
-      const res = await credentialAPI.create(provider, apiKey);
-      // Update local credentials state
+      const res = await credentialAPI.create(provider, finalKey);
       setCredentials(prev => {
         const filtered = prev.filter(c => c.provider !== provider);
         return [...filtered, res.data];
       });
       setApiKey("");
+      setAwsAccessKeyId("");
+      setAwsSecretAccessKey("");
       alert("LLM Provider credentials configured successfully!");
     } catch (err) {
       console.error(err);
@@ -228,8 +283,8 @@ export default function Settings() {
 
             {/* Add credentials form */}
             <form onSubmit={handleAddCredential} className="space-y-4 pt-3 border-t border-dark-border/40">
-              <div className="grid grid-cols-3 gap-3">
-                <div className="col-span-1">
+              <div className="space-y-4">
+                <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
                     LLM Provider
                   </label>
@@ -244,32 +299,93 @@ export default function Settings() {
                     <option value="meta_ads">Meta Ads (Facebook/Instagram)</option>
                     <option value="openrouter">OpenRouter</option>
                     <option value="cohere">Cohere</option>
+                    <option value="aws_bedrock">AWS Bedrock</option>
                     <option value="custom">Custom API Gateway</option>
                   </select>
                 </div>
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-                    API Key (Fernet Encrypted)
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    className="w-full bg-dark-bg border border-dark-border focus:border-brand-accent rounded-xl px-4 py-3 text-white text-sm outline-none placeholder-dark-muted"
-                    placeholder="sk-ant-api03-..."
-                  />
-                </div>
+
+                {provider === "aws_bedrock" ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
+                          AWS Access Key ID
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={awsAccessKeyId}
+                          onChange={(e) => setAwsAccessKeyId(e.target.value)}
+                          className="w-full bg-dark-bg border border-dark-border focus:border-brand-accent rounded-xl px-4 py-3 text-white text-sm outline-none placeholder-dark-muted"
+                          placeholder="AKIAIOSFODNN7EXAMPLE"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
+                          AWS Secret Access Key
+                        </label>
+                        <input
+                          type="password"
+                          required
+                          value={awsSecretAccessKey}
+                          onChange={(e) => setAwsSecretAccessKey(e.target.value)}
+                          className="w-full bg-dark-bg border border-dark-border focus:border-brand-accent rounded-xl px-4 py-3 text-white text-sm outline-none placeholder-dark-muted"
+                          placeholder="••••••••••••••••••••••••••••••••••••••••"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
+                        AWS Region
+                      </label>
+                      <select
+                        value={awsRegion}
+                        onChange={(e) => setAwsRegion(e.target.value)}
+                        className="w-full bg-dark-bg border border-dark-border focus:border-brand-accent rounded-xl px-4 py-3 text-white text-sm outline-none"
+                      >
+                        <option value="us-east-1">us-east-1 (N. Virginia)</option>
+                        <option value="us-west-2">us-west-2 (Oregon)</option>
+                        <option value="eu-central-1">eu-central-1 (Frankfurt)</option>
+                        <option value="ap-southeast-1">ap-southeast-1 (Singapore)</option>
+                      </select>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
+                      API Key (Fernet Encrypted)
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      className="w-full bg-dark-bg border border-dark-border focus:border-brand-accent rounded-xl px-4 py-3 text-white text-sm outline-none placeholder-dark-muted"
+                      placeholder={provider === "openai" ? "sk-proj-..." : provider === "gemini" ? "AIzaSy..." : "sk-..."}
+                    />
+                  </div>
+                )}
               </div>
 
-              <button
-                type="submit"
-                disabled={submittingKey}
-                className="w-full bg-dark-border hover:bg-dark-border/80 border border-brand-accent/20 hover:border-brand-accent/40 text-white font-semibold rounded-xl py-3 text-sm transition-colors flex items-center justify-center gap-2"
-              >
-                {submittingKey && <Loader2 size={16} className="animate-spin" />}
-                <span>Authorize Provider Key</span>
-              </button>
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleTestConnection}
+                  disabled={testingKey}
+                  className="w-full bg-dark-bg border border-dark-border hover:bg-dark-border/40 text-dark-muted hover:text-white font-semibold rounded-xl py-3 text-sm transition-colors flex items-center justify-center gap-2"
+                >
+                  {testingKey && <Loader2 size={16} className="animate-spin" />}
+                  <span>Test Connection</span>
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingKey}
+                  className="w-full bg-brand-accent hover:bg-brand-accent/90 text-white font-semibold rounded-xl py-3 text-sm transition-colors flex items-center justify-center gap-2"
+                >
+                  {submittingKey && <Loader2 size={16} className="animate-spin" />}
+                  <span>Save Credentials</span>
+                </button>
+              </div>
             </form>
           </div>
 

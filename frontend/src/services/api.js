@@ -68,6 +68,7 @@ export const credentialAPI = {
   list: () => api.get("/credentials/"),
   create: (provider, apiKey) => api.post("/credentials/", { provider, api_key: apiKey }),
   delete: (id) => api.delete(`/credentials/${id}`),
+  validate: (provider, apiKey) => api.post("/credentials/validate", { provider, api_key: apiKey }),
 };
 
 export const agentAPI = {

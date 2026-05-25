@@ -86,3 +86,110 @@ async def delete_credential(
         "DELETE_API_CREDENTIALS", {"provider": cred.provider}
     )
     return
+
+import logging
+from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
+
+class CredentialValidateRequest(BaseModel):
+    provider: str
+    api_key: str
+
+async def validate_api_credential(provider: str, api_key: str):
+    if provider == "anthropic":
+        from anthropic import AsyncAnthropic
+        client = AsyncAnthropic(api_key=api_key)
+        await client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=1,
+            messages=[{"role": "user", "content": "ping"}]
+        )
+    elif provider == "openai":
+        import httpx
+        async with httpx.AsyncClient() as client:
+            headers = {"Authorization": f"Bearer {api_key}"}
+            payload = {
+                "model": "gpt-4o-mini",
+                "messages": [{"role": "user", "content": "ping"}],
+                "max_tokens": 1
+            }
+            resp = await client.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload, timeout=10.0)
+            if resp.status_code != 200:
+                raise Exception(f"OpenAI API Error: {resp.text}")
+    elif provider == "gemini":
+        import httpx
+        async with httpx.AsyncClient() as client:
+            headers = {"Authorization": f"Bearer {api_key}"}
+            payload = {
+                "model": "gemini-1.5-flash",
+                "messages": [{"role": "user", "content": "ping"}],
+                "max_tokens": 1
+            }
+            resp = await client.post("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", headers=headers, json=payload, timeout=10.0)
+            if resp.status_code != 200:
+                raise Exception(f"Gemini API Error: {resp.text}")
+    elif provider == "openrouter":
+        import httpx
+        async with httpx.AsyncClient() as client:
+            headers = {"Authorization": f"Bearer {api_key}"}
+            payload = {
+                "model": "meta-llama/llama-3-8b-instruct:free",
+                "messages": [{"role": "user", "content": "ping"}],
+                "max_tokens": 1
+            }
+            resp = await client.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload, timeout=10.0)
+            if resp.status_code != 200:
+                raise Exception(f"OpenRouter API Error: {resp.text}")
+    elif provider == "aws_bedrock":
+        import json
+        import boto3
+        import asyncio
+        try:
+            config = json.loads(api_key)
+            aws_access_key_id = config.get("aws_access_key_id")
+            aws_secret_access_key = config.get("aws_secret_access_key")
+            aws_region = config.get("aws_region", "us-east-1")
+        except Exception:
+            raise Exception("Invalid Bedrock configuration format. Must be JSON.")
+        
+        if not aws_access_key_id or not aws_secret_access_key:
+            raise Exception("AWS access key ID and secret access key are required.")
+
+        def test():
+            session = boto3.Session(
+                aws_access_key_id=aws_access_key_id,
+                aws_secret_access_key=aws_secret_access_key,
+                region_name=aws_region
+            )
+            # Check control plane first
+            try:
+                c = session.client('bedrock')
+                c.list_foundation_models()
+                return
+            except Exception as e:
+                if "AccessDenied" not in str(e):
+                    raise e
+            # If list_foundation_models is blocked, test converse with default model
+            c_runtime = session.client('bedrock-runtime')
+            c_runtime.converse(
+                modelId="anthropic.claude-3-haiku-20240307-v1:0",
+                messages=[{"role": "user", "content": [{"text": "ping"}]}],
+                inferenceConfig={"maxTokens": 1}
+            )
+
+        await asyncio.to_thread(test)
+    else:
+        raise Exception(f"Validation not supported for provider '{provider}'")
+
+@router.post("/validate")
+async def validate_credentials_route(
+    req: CredentialValidateRequest,
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        await validate_api_credential(req.provider, req.api_key)
+        return {"valid": True}
+    except Exception as e:
+        logger.error(f"Credentials validation failed: {e}", exc_info=True)
+        return {"valid": False, "error": str(e)}

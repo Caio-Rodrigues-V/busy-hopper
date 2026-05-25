@@ -32,6 +32,7 @@ export default function OrgChart() {
   const [bossAgentId, setBossAgentId] = useState("");
   const [adapterType, setAdapterType] = useState("claude");
   const [model, setModel] = useState("claude-3-5-sonnet-20241022");
+  const [customModel, setCustomModel] = useState("");
   const [temperature, setTemperature] = useState(0.0);
   const [monthlyBudget, setMonthlyBudget] = useState(50.0);
   const [selectedTools, setSelectedTools] = useState([]);
@@ -163,7 +164,7 @@ export default function OrgChart() {
         role_prompt: rolePrompt,
         boss_agent_id: bossAgentId ? parseInt(bossAgentId) : null,
         adapter_type: adapterType,
-        model,
+        model: model === "custom_input" ? customModel : model,
         temperature: parseFloat(temperature),
         monthly_budget_usd: parseFloat(monthlyBudget),
         tools: selectedTools,
@@ -177,6 +178,7 @@ export default function OrgChart() {
       setTitle("");
       setRolePrompt("");
       setBossAgentId("");
+      setCustomModel("");
       setMonthlyBudget(50.0);
       setSelectedTools([]);
     } catch (err) {
@@ -419,12 +421,29 @@ export default function OrgChart() {
                   <select
                     value={model}
                     onChange={(e) => setModel(e.target.value)}
-                    className="w-full bg-dark-bg border border-dark-border focus:border-brand-primary rounded-xl px-4 py-3 text-white text-sm outline-none"
+                    className="w-full bg-dark-bg border border-dark-border focus:border-brand-primary rounded-xl px-4 py-3 text-white text-sm outline-none mb-2"
                   >
                     <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
                     <option value="claude-3-opus-20240229">Claude 3 Opus</option>
                     <option value="claude-3-haiku-20240307">Claude 3 Haiku</option>
+                    <option value="gpt-4o">GPT-4o (OpenAI)</option>
+                    <option value="gpt-4o-mini">GPT-4o mini (OpenAI)</option>
+                    <option value="gemini-1.5-pro">Gemini 1.5 Pro (Google)</option>
+                    <option value="gemini-1.5-flash">Gemini 1.5 Flash (Google)</option>
+                    <option value="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0">Bedrock Claude 3.5 Sonnet</option>
+                    <option value="bedrock/anthropic.claude-3-haiku-20240307-v1:0">Bedrock Claude 3 Haiku</option>
+                    <option value="custom_input">Custom Model...</option>
                   </select>
+                  {model === "custom_input" && (
+                    <input
+                      type="text"
+                      required
+                      value={customModel}
+                      onChange={(e) => setCustomModel(e.target.value)}
+                      className="w-full bg-dark-bg border border-dark-border focus:border-brand-primary rounded-xl px-4 py-2.5 text-white text-xs outline-none placeholder-dark-muted"
+                      placeholder="e.g. openrouter/google/gemini-2.5-pro"
+                    />
+                  )}
                 </div>
 
                 <div>

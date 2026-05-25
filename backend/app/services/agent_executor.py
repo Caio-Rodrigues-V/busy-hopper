@@ -24,6 +24,239 @@ from app.core.logging_config import execution_context
 
 logger = logging.getLogger(__name__)
 
+def get_provider_for_model(model: str) -> str:
+    m = model.lower()
+    if m.startswith("gemini-"):
+        return "gemini"
+    elif m.startswith("gpt-") or m.startswith("o1-") or m.startswith("o3-"):
+        return "openai"
+    elif m.startswith("openrouter/"):
+        return "openrouter"
+    elif m.startswith("bedrock/") or m.startswith("anthropic.claude") or m.startswith("meta.llama") or m.startswith("cohere.command") or m.startswith("amazon.titan") or m.startswith("us.") or m.startswith("eu."):
+        return "aws_bedrock"
+    else:
+        return "anthropic"
+
+class AdapterResponseBlock:
+    def __init__(self, block_type: str, text: str = None, tool_use_id: str = None, name: str = None, tool_input: dict = None):
+        self.type = block_type
+        self.text = text
+        self.id = tool_use_id
+        self.name = name
+        self.input = tool_input
+
+    def model_dump(self):
+        d = {"type": self.type}
+        if self.text is not None:
+            d["text"] = self.text
+        if self.id is not None:
+            d["id"] = self.id
+            d["name"] = self.name
+            d["input"] = self.input
+        return d
+
+class AdapterUsage:
+    def __init__(self, input_tokens: int, output_tokens: int):
+        self.input_tokens = input_tokens
+        self.output_tokens = output_tokens
+
+class AdapterResponse:
+    def __init__(self, content: list, stop_reason: str, usage: AdapterUsage):
+        self.content = content
+        self.stop_reason = stop_reason
+        self.usage = usage
+
+def translate_messages_to_openai(system_prompt: str, messages: List[Dict]) -> List[Dict]:
+    openai_msgs = []
+    if system_prompt:
+        openai_msgs.append({"role": "system", "content": system_prompt})
+        
+    for msg in messages:
+        role = msg.get("role")
+        content = msg.get("content")
+        
+        if role == "user":
+            if isinstance(content, list):
+                tool_results = [c for c in content if isinstance(c, dict) and c.get("type") == "tool_result"]
+                if tool_results:
+                    for tr in tool_results:
+                        openai_msgs.append({
+                            "role": "tool",
+                            "tool_call_id": tr.get("tool_use_id"),
+                            "content": str(tr.get("content", ""))
+                        })
+                else:
+                    text_parts = [c.get("text", "") for c in content if isinstance(c, dict) and c.get("type") == "text"]
+                    openai_msgs.append({"role": "user", "content": " ".join(text_parts)})
+            else:
+                openai_msgs.append({"role": "user", "content": content})
+                
+        elif role == "assistant":
+            if isinstance(content, list):
+                text_content = " ".join([c.get("text", "") for c in content if isinstance(c, dict) and c.get("type") == "text"])
+                tool_uses = [c for c in content if isinstance(c, dict) and c.get("type") == "tool_use"]
+                
+                openai_msg = {"role": "assistant"}
+                if text_content:
+                    openai_msg["content"] = text_content
+                else:
+                    openai_msg["content"] = None
+                    
+                if tool_uses:
+                    openai_msg["tool_calls"] = [
+                        {
+                            "id": tu.get("id"),
+                            "type": "function",
+                            "function": {
+                                "name": tu.get("name"),
+                                "arguments": json.dumps(tu.get("input", {}))
+                            }
+                        } for tu in tool_uses
+                    ]
+                openai_msgs.append(openai_msg)
+            else:
+                openai_msgs.append({"role": "assistant", "content": content})
+                
+    return openai_msgs
+
+def translate_tools_to_openai(claude_tools: List[Dict]) -> List[Dict]:
+    if not claude_tools:
+        return None
+    openai_tools = []
+    for tool in claude_tools:
+        openai_tools.append({
+            "type": "function",
+            "function": {
+                "name": tool["name"],
+                "description": tool["description"],
+                "parameters": tool["input_schema"]
+            }
+        })
+    return openai_tools
+
+def parse_openai_response(resp_json) -> AdapterResponse:
+    choice = resp_json["choices"][0]
+    message = choice["message"]
+    finish_reason = choice.get("finish_reason")
+    
+    stop_reason = "tool_use" if finish_reason == "tool_calls" else "end_turn"
+    
+    content_blocks = []
+    if message.get("content"):
+        content_blocks.append(AdapterResponseBlock(block_type="text", text=message["content"]))
+        
+    if message.get("tool_calls"):
+        for tc in message["tool_calls"]:
+            try:
+                args = json.loads(tc["function"]["arguments"])
+            except Exception:
+                args = {}
+            content_blocks.append(AdapterResponseBlock(
+                block_type="tool_use",
+                tool_use_id=tc["id"],
+                name=tc["function"]["name"],
+                tool_input=args
+            ))
+            
+    usage_data = resp_json.get("usage", {})
+    usage = AdapterUsage(
+        input_tokens=usage_data.get("prompt_tokens", 100),
+        output_tokens=usage_data.get("completion_tokens", 100)
+    )
+    
+    return AdapterResponse(content=content_blocks, stop_reason=stop_reason, usage=usage)
+
+def translate_messages_to_bedrock(system_prompt: str, messages: List[Dict]) -> Tuple[List[Dict], List[Dict]]:
+    bedrock_system = [{"text": system_prompt}] if system_prompt else []
+    bedrock_msgs = []
+    
+    for msg in messages:
+        role = msg.get("role")
+        content = msg.get("content")
+        
+        if role == "user":
+            bedrock_content = []
+            if isinstance(content, list):
+                tool_results = [c for c in content if isinstance(c, dict) and c.get("type") == "tool_result"]
+                if tool_results:
+                    for tr in tool_results:
+                        bedrock_content.append({
+                            "toolResult": {
+                                "toolUseId": tr.get("tool_use_id"),
+                                "status": "success",
+                                "content": [{"text": str(tr.get("content", ""))}]
+                            }
+                        })
+                else:
+                    for c in content:
+                        if isinstance(c, dict) and c.get("type") == "text":
+                            bedrock_content.append({"text": c.get("text", "")})
+            else:
+                bedrock_content.append({"text": content})
+            bedrock_msgs.append({"role": "user", "content": bedrock_content})
+            
+        elif role == "assistant":
+            bedrock_content = []
+            if isinstance(content, list):
+                for c in content:
+                    if isinstance(c, dict) and c.get("type") == "text":
+                        bedrock_content.append({"text": c.get("text", "")})
+                    elif isinstance(c, dict) and c.get("type") == "tool_use":
+                        bedrock_content.append({
+                            "toolUse": {
+                                "toolUseId": c.get("id"),
+                                "name": c.get("name"),
+                                "input": c.get("input", {})
+                            }
+                        })
+            else:
+                bedrock_content.append({"text": content})
+            bedrock_msgs.append({"role": "assistant", "content": bedrock_content})
+            
+    return bedrock_system, bedrock_msgs
+
+def translate_tools_to_bedrock(claude_tools: List[Dict]) -> Dict:
+    if not claude_tools:
+        return None
+    tools_list = []
+    for tool in claude_tools:
+        tools_list.append({
+            "toolSpec": {
+                "name": tool["name"],
+                "description": tool["description"],
+                "inputSchema": {
+                    "json": tool["input_schema"]
+                }
+            }
+        })
+    return {"tools": tools_list}
+
+def parse_bedrock_response(response) -> AdapterResponse:
+    output_message = response["output"]["message"]
+    stop_reason = response.get("stopReason", "end_turn")
+    mapped_stop_reason = "tool_use" if stop_reason == "tool_use" else "end_turn"
+        
+    content_blocks = []
+    for block in output_message.get("content", []):
+        if "text" in block:
+            content_blocks.append(AdapterResponseBlock(block_type="text", text=block["text"]))
+        elif "toolUse" in block:
+            tu = block["toolUse"]
+            content_blocks.append(AdapterResponseBlock(
+                block_type="tool_use",
+                tool_use_id=tu["toolUseId"],
+                name=tu["name"],
+                tool_input=tu["input"]
+            ))
+            
+    usage_data = response.get("usage", {})
+    usage = AdapterUsage(
+        input_tokens=usage_data.get("inputTokens", 100),
+        output_tokens=usage_data.get("outputTokens", 100)
+    )
+    
+    return AdapterResponse(content=content_blocks, stop_reason=mapped_stop_reason, usage=usage)
+
 # Constants
 MAX_ITERATIONS = 10
 
@@ -120,9 +353,21 @@ class AgentExecutor:
             return "Company monthly budget limit exceeded."
 
         # 3. Retrieve API Key
-        api_key = await self._get_anthropic_key()
-        if not api_key:
-            return "Anthropic Claude API Key not configured."
+        provider = get_provider_for_model(agent.model)
+        if provider == "anthropic":
+            api_key = await self._get_anthropic_key()
+        else:
+            api_key = await self._get_provider_key(provider)
+            if not api_key:
+                if provider == "openai":
+                    api_key = os.getenv("OPENAI_API_KEY")
+                elif provider == "gemini":
+                    api_key = os.getenv("GEMINI_API_KEY")
+                elif provider == "openrouter":
+                    api_key = os.getenv("OPENROUTER_API_KEY")
+                
+        if not api_key and provider != "aws_bedrock" and provider != "mock":
+            return f"{provider.capitalize()} API Key not configured."
 
         # 4. Atomic Checkout (locking task)
         async with _checkout_lock:
@@ -479,8 +724,19 @@ class AgentExecutor:
         })
 
         # Fetch credentials and client
-        api_key = await self._get_anthropic_key()
-        client = AsyncAnthropic(api_key=api_key)
+        provider = get_provider_for_model(agent.model)
+        if provider == "anthropic":
+            api_key = await self._get_anthropic_key()
+        else:
+            api_key = await self._get_provider_key(provider)
+            if not api_key:
+                if provider == "openai":
+                    api_key = os.getenv("OPENAI_API_KEY")
+                elif provider == "gemini":
+                    api_key = os.getenv("GEMINI_API_KEY")
+                elif provider == "openrouter":
+                    api_key = os.getenv("OPENROUTER_API_KEY")
+        client = None
 
         # Read past run steps to rebuild messages history
         # (This avoids memory state loss since FastAPI is stateless)
@@ -761,61 +1017,118 @@ class AgentExecutor:
             execution_context.reset(token)
 
     async def _messages_create(self, client, api_params, api_key, agent, task, messages) -> Any:
-        """Calls the Anthropic API, or returns a mock message response if using a mock key.
-        Includes timeout, retry and exponential backoff for transient errors (429/5xx).
+        """Calls the Anthropic, OpenAI, Gemini, OpenRouter, or AWS Bedrock API dynamically based on agent model.
+        Includes timeout, retry and exponential backoff for transient errors.
         """
-        if api_key == "your_anthropic_api_key_here" or api_key.lower().startswith("mock"):
+        if not api_key or api_key == "your_anthropic_api_key_here" or api_key.lower().startswith("mock") or api_key.lower().startswith("your_"):
             return await self._get_mock_llm_response(agent, task, messages)
+
+        provider = get_provider_for_model(agent.model)
 
         import asyncio
         import random
-        from anthropic import (
-            RateLimitError,
-            InternalServerError,
-            APITimeoutError,
-            APIConnectionError,
-            APIStatusError
-        )
-
         max_retries = 5
         initial_delay = 1.0
         factor = 2.0
 
         for attempt in range(max_retries + 1):
             try:
-                # Call Anthropic API with 30s timeout
-                return await asyncio.wait_for(
-                    client.messages.create(**api_params),
-                    timeout=30.0
-                )
-            except (RateLimitError, InternalServerError, APITimeoutError, APIConnectionError) as e:
-                if attempt == max_retries:
-                    logger.error(f"Anthropic API failed after {max_retries} retries with transient error: {e}")
-                    raise
-                delay = initial_delay * (factor ** attempt) + random.uniform(0.1, 1.0)
-                logger.warning(f"Anthropic API transient error: {e}. Retrying in {delay:.2f}s (attempt {attempt + 1}/{max_retries})...")
-                await asyncio.sleep(delay)
-            except APIStatusError as e:
-                # Retry on 429 or 5xx status codes
-                is_transient = e.status_code == 429 or e.status_code >= 500
-                if is_transient and attempt < max_retries:
-                    delay = initial_delay * (factor ** attempt) + random.uniform(0.1, 1.0)
-                    logger.warning(f"Anthropic API status {e.status_code}: {e}. Retrying in {delay:.2f}s (attempt {attempt + 1}/{max_retries})...")
-                    await asyncio.sleep(delay)
-                else:
-                    logger.error(f"Anthropic API failed with permanent status {e.status_code}: {e}")
-                    raise
-            except asyncio.TimeoutError as e:
-                if attempt == max_retries:
-                    logger.error(f"Anthropic API call timed out after {max_retries} retries.")
-                    raise
-                delay = initial_delay * (factor ** attempt) + random.uniform(0.1, 1.0)
-                logger.warning(f"Anthropic API request timed out. Retrying in {delay:.2f}s (attempt {attempt + 1}/{max_retries})...")
-                await asyncio.sleep(delay)
+                if provider == "anthropic":
+                    from anthropic import AsyncAnthropic
+                    anthropic_client = client or AsyncAnthropic(api_key=api_key)
+                    return await asyncio.wait_for(
+                        anthropic_client.messages.create(**api_params),
+                        timeout=30.0
+                    )
+                elif provider in ("openai", "gemini", "openrouter"):
+                    import httpx
+                    if provider == "openai":
+                        url = "https://api.openai.com/v1/chat/completions"
+                        headers = {"Authorization": f"Bearer {api_key}"}
+                        model_name = agent.model if agent.model else "gpt-4o"
+                    elif provider == "gemini":
+                        url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+                        headers = {"Authorization": f"Bearer {api_key}"}
+                        model_name = agent.model if agent.model else "gemini-1.5-flash"
+                    else: # openrouter
+                        url = "https://openrouter.ai/api/v1/chat/completions"
+                        headers = {
+                            "Authorization": f"Bearer {api_key}",
+                            "HTTP-Referer": "https://happy-heart-production-79f4.up.railway.app",
+                            "X-Title": "Busy Hopper Orchestrator"
+                        }
+                        model_name = agent.model.replace("openrouter/", "") if agent.model.startswith("openrouter/") else agent.model
+
+                    openai_msgs = translate_messages_to_openai(api_params.get("system", ""), messages)
+                    openai_tools = translate_tools_to_openai(self._build_claude_tools(agent.tools))
+                    
+                    payload = {
+                        "model": model_name,
+                        "messages": openai_msgs,
+                        "temperature": api_params.get("temperature", 0.0),
+                    }
+                    if openai_tools:
+                        payload["tools"] = openai_tools
+
+                    async with httpx.AsyncClient() as http_client:
+                        resp = await http_client.post(url, headers=headers, json=payload, timeout=30.0)
+                        if resp.status_code != 200:
+                            raise Exception(f"{provider.upper()} API error ({resp.status_code}): {resp.text}")
+                        resp_json = resp.json()
+                        return parse_openai_response(resp_json)
+
+                elif provider == "aws_bedrock":
+                    import json
+                    import boto3
+                    
+                    try:
+                        config = json.loads(api_key)
+                        aws_access_key_id = config.get("aws_access_key_id")
+                        aws_secret_access_key = config.get("aws_secret_access_key")
+                        aws_region = config.get("aws_region", "us-east-1")
+                    except Exception:
+                        aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+                        aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+                        aws_region = os.getenv("AWS_REGION", "us-east-1")
+
+                    bedrock_model = agent.model.replace("bedrock/", "") if agent.model.startswith("bedrock/") else agent.model
+                    
+                    if bedrock_model == "" or bedrock_model == "aws_bedrock":
+                        bedrock_model = "anthropic.claude-3-haiku-20240307-v1:0"
+
+                    bedrock_system, bedrock_msgs = translate_messages_to_bedrock(api_params.get("system", ""), messages)
+                    bedrock_tools = translate_tools_to_bedrock(self._build_claude_tools(agent.tools))
+
+                    def invoke():
+                        session = boto3.Session(
+                            aws_access_key_id=aws_access_key_id,
+                            aws_secret_access_key=aws_secret_access_key,
+                            region_name=aws_region
+                        )
+                        client_bedrock = session.client('bedrock-runtime')
+                        
+                        converse_params = {
+                            "modelId": bedrock_model,
+                            "messages": bedrock_msgs,
+                            "inferenceConfig": {"temperature": api_params.get("temperature", 0.0)}
+                        }
+                        if bedrock_system:
+                            converse_params["system"] = bedrock_system
+                        if bedrock_tools:
+                            converse_params["toolConfig"] = bedrock_tools
+                            
+                        return client_bedrock.converse(**converse_params)
+
+                    response = await asyncio.to_thread(invoke)
+                    return parse_bedrock_response(response)
+
             except Exception as e:
-                # Permanent failure
-                logger.error(f"Anthropic API failed with unexpected exception: {e}")
-                raise
+                if attempt == max_retries:
+                    logger.error(f"LLM API call failed after {max_retries} retries: {e}")
+                    raise
+                delay = initial_delay * (factor ** attempt) + random.uniform(0.1, 1.0)
+                logger.warning(f"LLM API transient error on {provider}: {e}. Retrying in {delay:.2f}s...")
+                await asyncio.sleep(delay)
 
     async def _get_mock_llm_response(self, agent, task, messages) -> Any:
         """Simulates agent decisions and tool invocations step-by-step for local testing without APIs."""
@@ -966,19 +1279,24 @@ class AgentExecutor:
                 return MockMessage(content=content, stop_reason="end_turn")
 
     # Private Helpers & Tool Actions
-    async def _get_anthropic_key(self) -> Optional[str]:
-        """Loads the decrypted key from database, falling back to environment settings."""
+    async def _get_provider_key(self, provider: str) -> Optional[str]:
+        """Loads the decrypted key from database for a specific provider."""
         query = select(ApiCredential).filter(
             ApiCredential.company_id == self.company_id,
-            ApiCredential.provider == "anthropic"
+            ApiCredential.provider == provider
         )
         cred = (await self.db.execute(query)).scalars().first()
         if cred:
             try:
                 return decrypt_key(cred.encrypted_key)
             except Exception as e:
-                logger.error(f"Decryption of API key failed: {e}")
-        return settings.ANTHROPIC_API_KEY
+                logger.error(f"Decryption of API key failed for {provider}: {e}")
+        return None
+
+    async def _get_anthropic_key(self) -> Optional[str]:
+        """Loads the decrypted key from database, falling back to environment settings."""
+        key = await self._get_provider_key("anthropic")
+        return key if key else settings.ANTHROPIC_API_KEY
 
     def _build_claude_tools(self, allowed_tools: List[str]) -> List[Dict]:
         """Builds schemas for only the tools explicitly configured for the agent."""
