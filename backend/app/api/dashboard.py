@@ -9,6 +9,7 @@ from app.core.deps import get_db, get_current_company
 from app.models.company import Company
 from app.models.run import Run, RunStep
 from app.models.agent import Agent
+from app.models.task import Task
 
 router = APIRouter()
 
@@ -145,6 +146,36 @@ async def get_dashboard_metrics(
             "monthly_budget": agent.monthly_budget_usd
         })
 
+    # 8. Top tasks by token consumption
+    top_tasks_query = (
+        select(
+            Task.id,
+            Task.title,
+            Agent.name.label("agent_name"),
+            func.coalesce(func.sum(RunStep.cost_usd), 0.0).label("cost"),
+            func.coalesce(func.sum(RunStep.tokens), 0).label("tokens")
+        )
+        .join(Run, Run.task_id == Task.id)
+        .join(RunStep, RunStep.run_id == Run.id)
+        .join(Agent, Agent.id == Task.assignee_agent_id)
+        .filter(Task.company_id == company.id)
+        .group_by(Task.id, Task.title, Agent.name)
+        .order_by(func.sum(RunStep.tokens).desc())
+        .limit(5)
+    )
+    top_tasks_res = (await db.execute(top_tasks_query)).all()
+    top_tasks = [
+        {
+            "task_id": row.id,
+            "title": row.title,
+            "agent_name": row.agent_name,
+            "cost": round(row.cost, 4),
+            "markup_cost": round(row.cost * markup_factor, 4),
+            "tokens": row.tokens
+        }
+        for row in top_tasks_res
+    ]
+
     return {
         "company_name": company.name,
         "mission": company.mission,
@@ -158,5 +189,6 @@ async def get_dashboard_metrics(
             "success_rate": round(success_rate, 1)
         },
         "cost_over_time": cost_over_time,
-        "agent_metrics": agent_metrics
+        "agent_metrics": agent_metrics,
+        "top_tasks": top_tasks
     }

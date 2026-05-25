@@ -87,7 +87,7 @@ export default function Dashboard() {
     );
   }
 
-  const { kpis, cost_over_time, agent_metrics } = metrics;
+  const { kpis, cost_over_time, agent_metrics, top_tasks = [] } = metrics;
 
   // Colors for donut chart (strictly Orange and Black/Dark Gray)
   const PIE_COLORS = ["#FF5500", "#1D1D24"];
@@ -327,6 +327,48 @@ export default function Dashboard() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Top Consuming Tasks Grid */}
+      <div className="glass-panel rounded-2xl p-6">
+        <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-6 flex items-center gap-2">
+          <Activity className="text-brand-primary animate-pulse" />
+          <span>Top Tarefas por Consumo de Tokens</span>
+        </h3>
+        {top_tasks.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-dark-border text-xs text-dark-muted font-semibold uppercase tracking-wider">
+                  <th className="pb-3">ID da Tarefa</th>
+                  <th className="pb-3">Título da Tarefa</th>
+                  <th className="pb-3">Agente Responsável</th>
+                  <th className="pb-3 text-right">Tokens Consumidos</th>
+                  <th className="pb-3 text-right">Custo Estimado (Real)</th>
+                  <th className="pb-3 text-right">Faturamento (Markup)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-dark-border/40 text-dark-text">
+                {top_tasks.map((task) => (
+                  <tr key={task.task_id} className="hover:bg-dark-border/10 transition-colors">
+                    <td className="py-4 font-mono text-dark-muted">#{task.task_id}</td>
+                    <td className="py-4 font-semibold text-white">{task.title}</td>
+                    <td className="py-4 text-dark-muted">{task.agent_name}</td>
+                    <td className="py-4 text-right font-mono font-medium text-brand-accent">
+                      {task.tokens.toLocaleString()}
+                    </td>
+                    <td className="py-4 text-right font-medium text-white">${task.cost.toFixed(4)}</td>
+                    <td className="py-4 text-right font-medium text-brand-primary">${task.markup_cost.toFixed(4)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-dark-muted italic">
+            Nenhuma tarefa com histórico de consumo de tokens registrado ainda.
+          </div>
+        )}
       </div>
     </div>
   );
