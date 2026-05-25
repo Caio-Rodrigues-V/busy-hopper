@@ -170,13 +170,33 @@ async def validate_api_credential(provider: str, api_key: str):
             except Exception as e:
                 if "AccessDenied" not in str(e):
                     raise e
-            # If list_foundation_models is blocked, test converse with default model
+            # If list_foundation_models is blocked, test converse with active models
             c_runtime = session.client('bedrock-runtime')
-            c_runtime.converse(
-                modelId="anthropic.claude-3-haiku-20240307-v1:0",
-                messages=[{"role": "user", "content": [{"text": "ping"}]}],
-                inferenceConfig={"maxTokens": 1}
-            )
+            models_to_try = [
+                "anthropic.claude-3-5-sonnet-20241022-v2:0",
+                "anthropic.claude-3-5-haiku-20241022-v1:0",
+                "anthropic.claude-3-5-sonnet-20240620-v1:0",
+                "anthropic.claude-3-haiku-20240307-v1:0"
+            ]
+            
+            last_err = None
+            for model_id in models_to_try:
+                try:
+                    c_runtime.converse(
+                        modelId=model_id,
+                        messages=[{"role": "user", "content": [{"text": "ping"}]}],
+                        inferenceConfig={"maxTokens": 1}
+                    )
+                    return
+                except Exception as e:
+                    last_err = e
+                    err_str = str(e)
+                    if "ResourceNotFoundException" in err_str or "access denied" in err_str.lower() or "not authorized" in err_str.lower():
+                        continue
+                    else:
+                        raise e
+            if last_err:
+                raise last_err
 
         await asyncio.to_thread(test)
     else:

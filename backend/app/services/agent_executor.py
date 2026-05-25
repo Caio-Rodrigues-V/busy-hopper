@@ -1109,7 +1109,7 @@ class AgentExecutor:
                     bedrock_model = agent.model.replace("bedrock/", "") if agent.model.startswith("bedrock/") else agent.model
                     
                     if bedrock_model == "" or bedrock_model == "aws_bedrock":
-                        bedrock_model = "anthropic.claude-3-haiku-20240307-v1:0"
+                        bedrock_model = "anthropic.claude-3-5-sonnet-20241022-v2:0"
 
                     bedrock_system, bedrock_msgs = translate_messages_to_bedrock(api_params.get("system", ""), messages)
                     bedrock_tools = translate_tools_to_bedrock(self._build_claude_tools(agent.tools))
