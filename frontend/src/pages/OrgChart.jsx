@@ -39,6 +39,11 @@ export default function OrgChart() {
   const [selectedTools, setSelectedTools] = useState([]);
   const [submitting, setSubmitting] = useState(false);
 
+  // Edit budget states
+  const [isEditingBudget, setIsEditingBudget] = useState(false);
+  const [editBudgetValue, setEditBudgetValue] = useState("");
+  const [updatingBudget, setUpdatingBudget] = useState(false);
+
   // Inspected agent details modal states
   const [inspectedAgent, setInspectedAgent] = useState(null);
   const [artifacts, setArtifacts] = useState([]);
@@ -271,6 +276,36 @@ export default function OrgChart() {
       alert(err.response?.data?.detail || "Falha ao criar agente.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleUpdateBudget = async () => {
+    if (!editBudgetValue || isNaN(parseFloat(editBudgetValue)) || parseFloat(editBudgetValue) <= 0) {
+      alert("Por favor, insira um orçamento mensal válido (maior que 0).");
+      return;
+    }
+    setUpdatingBudget(true);
+    try {
+      const budgetNum = parseFloat(editBudgetValue);
+      await agentAPI.update(inspectedAgent.id, { monthly_budget_usd: budgetNum });
+      
+      // Update inspected agent state
+      setInspectedAgent(prev => ({
+        ...prev,
+        monthly_budget_usd: budgetNum
+      }));
+      
+      // Update agents list
+      setAgents(prev =>
+        prev.map(a => a.id === inspectedAgent.id ? { ...a, monthly_budget_usd: budgetNum } : a)
+      );
+      
+      setIsEditingBudget(false);
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.detail || "Falha ao atualizar orçamento.");
+    } finally {
+      setUpdatingBudget(false);
     }
   };
 
@@ -635,7 +670,7 @@ export default function OrgChart() {
                 </div>
               </div>
               <button
-                onClick={() => setInspectedAgent(null)}
+                onClick={() => { setInspectedAgent(null); setIsEditingBudget(false); }}
                 className="text-dark-muted hover:text-white border border-dark-border hover:bg-dark-border/40 px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors"
               >
                 Fechar Painel
@@ -694,7 +729,44 @@ export default function OrgChart() {
                       </div>
                       <div>
                         <span className="block text-[10px] uppercase text-dark-muted mb-0.5">Orçamento Mensal</span>
-                        <span className="text-white font-bold">${inspectedAgent.monthly_budget_usd.toFixed(2)} USD</span>
+                        {isEditingBudget ? (
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={editBudgetValue}
+                              onChange={(e) => setEditBudgetValue(e.target.value)}
+                              className="w-20 bg-dark-bg border border-dark-border focus:border-brand-primary rounded px-2 py-1 text-white text-xs outline-none"
+                            />
+                            <button
+                              onClick={handleUpdateBudget}
+                              disabled={updatingBudget}
+                              className="bg-brand-primary/20 hover:bg-brand-primary/30 text-brand-primary border border-brand-primary/30 px-2 py-1 rounded text-[10px] font-bold transition-colors"
+                            >
+                              Salvar
+                            </button>
+                            <button
+                              onClick={() => setIsEditingBudget(false)}
+                              disabled={updatingBudget}
+                              className="bg-dark-border/40 hover:bg-dark-border/60 text-white border border-dark-border/30 px-2 py-1 rounded text-[10px] font-medium transition-colors"
+                            >
+                              X
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-white font-bold">${inspectedAgent.monthly_budget_usd.toFixed(2)} USD</span>
+                            <button
+                              onClick={() => {
+                                setEditBudgetValue(inspectedAgent.monthly_budget_usd.toString());
+                                setIsEditingBudget(true);
+                              }}
+                              className="text-[10px] text-brand-primary hover:underline font-semibold"
+                            >
+                              Editar
+                            </button>
+                          </div>
+                        )}
                       </div>
                       <div>
                         <span className="block text-[10px] uppercase text-dark-muted mb-0.5">Tipo do Adaptador</span>
