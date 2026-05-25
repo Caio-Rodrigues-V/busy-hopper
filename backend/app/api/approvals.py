@@ -75,11 +75,25 @@ async def decide_approval(
     task_id = payload.get("task_id")
     agent_id = payload.get("agent_id")
     
-    if decision == "approved" and task_id and agent_id:
+    if decision == "approved" and task_id is not None and agent_id is not None:
+        try:
+            task_id = int(task_id)
+            agent_id = int(agent_id)
+        except (ValueError, TypeError) as te:
+            logger.error(f"Failed to cast task_id {task_id} or agent_id {agent_id} to int: {te}")
+            raise HTTPException(status_code=400, detail="Invalid task_id or agent_id in payload.")
+
         # Validate that the task and agent in the payload belong to the same company
         task_check = await db.execute(select(Task).filter(Task.id == task_id, Task.company_id == company.id))
         agent_check = await db.execute(select(Agent).filter(Agent.id == agent_id, Agent.company_id == company.id))
-        if not task_check.scalars().first() or not agent_check.scalars().first():
+        task_obj = task_check.scalars().first()
+        agent_obj = agent_check.scalars().first()
+        
+        if not task_obj or not agent_obj:
+            logger.error(
+                f"Approval validation failed: task_id={task_id} (exists: {task_obj is not None}), "
+                f"agent_id={agent_id} (exists: {agent_obj is not None}) for company_id={company.id}"
+            )
             raise HTTPException(status_code=400, detail="Invalid approval payload: Agent or Task does not belong to this company.")
 
         logger.info(f"Approvals: Resuming task {task_id} run for Agent {agent_id} in background.")
