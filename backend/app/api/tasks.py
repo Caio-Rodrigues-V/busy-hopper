@@ -31,12 +31,26 @@ async def debug_db(db: AsyncSession = Depends(get_db)):
     runs = (await db.execute(select(Run))).scalars().all()
     users = (await db.execute(select(User))).scalars().all()
     
+    # Let's get run steps in detail
+    run_steps = {}
+    for r in runs:
+        steps_res = await db.execute(select(RunStep).filter(RunStep.run_id == r.id).order_by(RunStep.created_at.asc()))
+        steps = steps_res.scalars().all()
+        run_steps[r.id] = [{
+            "id": s.id,
+            "kind": s.kind,
+            "input": s.input,
+            "output": s.output,
+            "latency": s.latency_ms,
+            "cost": s.cost_usd
+        } for s in steps]
+    
     return {
         "users": [{"id": u.id, "email": u.email} for u in users],
         "companies": [{"id": c.id, "name": c.name, "user_id": c.user_id} for c in companies],
-        "agents": [{"id": a.id, "name": a.name, "company_id": a.company_id, "status": a.status} for a in agents],
+        "agents": [{"id": a.id, "name": a.name, "company_id": a.company_id, "status": a.status, "tools": a.tools} for a in agents],
         "tasks": [{"id": t.id, "title": t.title, "status": t.status, "company_id": t.company_id, "assignee": t.assignee_agent_id} for t in tasks],
-        "runs": [{"id": r.id, "task_id": r.task_id, "status": r.status} for r in runs]
+        "runs": [{"id": r.id, "task_id": r.task_id, "status": r.status, "steps": run_steps.get(r.id, [])} for r in runs]
     }
 
 @router.get("/", response_model=List[TaskResponse])
