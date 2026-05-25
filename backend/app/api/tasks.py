@@ -16,6 +16,29 @@ from app.services.scheduler import run_agent_task
 
 router = APIRouter()
 
+@router.get("/debug-db")
+async def debug_db(db: AsyncSession = Depends(get_db)):
+    from app.models.company import Company
+    from app.models.agent import Agent
+    from app.models.task import Task
+    from app.models.run import Run, RunStep
+    from app.models.user import User
+    from sqlalchemy.future import select
+    
+    companies = (await db.execute(select(Company))).scalars().all()
+    agents = (await db.execute(select(Agent))).scalars().all()
+    tasks = (await db.execute(select(Task))).scalars().all()
+    runs = (await db.execute(select(Run))).scalars().all()
+    users = (await db.execute(select(User))).scalars().all()
+    
+    return {
+        "users": [{"id": u.id, "email": u.email} for u in users],
+        "companies": [{"id": c.id, "name": c.name, "user_id": c.user_id} for c in companies],
+        "agents": [{"id": a.id, "name": a.name, "company_id": a.company_id, "status": a.status} for a in agents],
+        "tasks": [{"id": t.id, "title": t.title, "status": t.status, "company_id": t.company_id, "assignee": t.assignee_agent_id} for t in tasks],
+        "runs": [{"id": r.id, "task_id": r.task_id, "status": r.status} for r in runs]
+    }
+
 @router.get("/", response_model=List[TaskResponse])
 async def list_tasks(
     db: AsyncSession = Depends(get_db),
