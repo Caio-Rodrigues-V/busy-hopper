@@ -150,7 +150,7 @@ async def validate_api_credential(provider: str, api_key: str):
             "meta-llama/llama-3-8b-instruct:free"
         ]
         headers = {"Authorization": f"Bearer {api_key}"}
-        last_resp_text = ""
+        errors = []
         for model in models_to_try:
             try:
                 async with httpx.AsyncClient() as client:
@@ -163,10 +163,10 @@ async def validate_api_credential(provider: str, api_key: str):
                     if resp.status_code == 200:
                         return
                     else:
-                        last_resp_text = resp.text
+                        errors.append(f"{model}: {resp.status_code} - {resp.text}")
             except Exception as e:
-                last_resp_text = str(e)
-        raise Exception(f"OpenRouter API Error: {last_resp_text}")
+                errors.append(f"{model}: {e}")
+        raise Exception(f"OpenRouter API Error details: {', '.join(errors)}")
     elif provider == "aws_bedrock":
         import json
         import boto3
