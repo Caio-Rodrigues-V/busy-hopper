@@ -579,6 +579,12 @@ class AgentExecutor:
                         paused_for_approval = True
                     elif tool_name == "generate_image_asset":
                         tool_result = await self._tool_generate_image_asset(tool_input)
+                    elif tool_name == "hire_agent":
+                        # Hiring a new agent requires human approval gate
+                        tool_result = await self._tool_request_approval(
+                            {"action_type": "hire_agent", "payload": tool_input}, run
+                        )
+                        paused_for_approval = True
                     else:
                         tool_result = f"Unknown tool '{tool_name}'."
 
@@ -775,6 +781,9 @@ class AgentExecutor:
             elif approval.action_type == "publish_meta_campaign":
                 # Deploy Meta Ads campaign
                 outcome = await self._tool_execute_meta_campaign(approval.payload)
+            elif approval.action_type == "hire_agent":
+                # Create the agent in database
+                outcome = await self._tool_execute_hire_agent(approval.payload)
 
         # We need to find the last assistant message and its tool_use id to associate the result
         last_assistant_msg = messages[-1]
@@ -937,6 +946,12 @@ class AgentExecutor:
                         paused_for_approval = True
                     elif tool_name == "generate_image_asset":
                         tool_result = await self._tool_generate_image_asset(tool_input)
+                    elif tool_name == "hire_agent":
+                        # Hiring a new agent requires human approval gate
+                        tool_result = await self._tool_request_approval(
+                            {"action_type": "hire_agent", "payload": tool_input}, run
+                        )
+                        paused_for_approval = True
                     else:
                         tool_result = f"Unknown tool '{tool_name}'."
 
@@ -1385,6 +1400,27 @@ class AgentExecutor:
                     },
                     "required": ["prompt", "filename"]
                 }
+            },
+            "hire_agent": {
+                "name": "hire_agent",
+                "description": "Hire a new subordinate agent under your hierarchy to manage or execute specific tasks.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string", "description": "The name of the new agent"},
+                        "title": {"type": "string", "description": "The title/role of the new agent (e.g. Traffic Manager, Copywriter)"},
+                        "role_prompt": {"type": "string", "description": "System instructions / system prompt for the new agent's behavior and boundaries"},
+                        "model": {"type": "string", "description": "LLM model identifier to use (e.g. claude-3-5-sonnet-20241022, gpt-4o-mini, gemini-1.5-flash)"},
+                        "temperature": {"type": "number", "description": "Sampling temperature, e.g. 0.0 to 1.0 (default 0.0)"},
+                        "monthly_budget_usd": {"type": "number", "description": "Maximum USD monthly budget allocation for this agent"},
+                        "tools": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "List of tool names allowed for this agent. Choose from: delegate_task, request_approval, web_search, read_write_file, run_bash_command, publish_meta_campaign, generate_image_asset"
+                        }
+                    },
+                    "required": ["name", "title", "role_prompt", "model", "monthly_budget_usd", "tools"]
+                }
             }
         }
         return [all_schemas[t] for t in allowed_tools if t in all_schemas]
@@ -1693,3 +1729,46 @@ class AgentExecutor:
             return f"SUCCESS: Styled creative vector image generated and saved to workspace as '{clean_filename}'."
         except Exception as e:
             return f"Error registering image asset generation: {str(e)}"
+
+    async def _tool_execute_hire_agent(self, payload: Dict[str, Any]) -> str:
+        """Creates the hired subordinate agent in database after board approval."""
+        try:
+            name = payload.get("name")
+            title = payload.get("title")
+            role_prompt = payload.get("role_prompt")
+            model = payload.get("model", "gpt-4o-mini")
+            temp = float(payload.get("temperature", 0.0))
+            budget = float(payload.get("monthly_budget_usd", 50.0))
+            tools = payload.get("tools", [])
+
+            # Resolve provider key
+            adapter_type = get_provider_for_model(model)
+
+            new_agent = Agent(
+                company_id=self.company_id,
+                name=name,
+                title=title,
+                role_prompt=role_prompt,
+                boss_agent_id=self.agent_id, # Hired under the hierarchy of current agent
+                adapter_type=adapter_type,
+                model=model,
+                temperature=temp,
+                monthly_budget_usd=budget,
+                tools=tools,
+                status="active"
+            )
+            self.db.add(new_agent)
+            await self.db.commit()
+            await self.db.refresh(new_agent)
+
+            await create_audit_entry(
+                self.db, self.company_id, f"agent_{self.agent_id}",
+                "AGENT_HIRED", {"new_agent_id": new_agent.id, "name": name, "title": title}
+            )
+
+            # Broadcast WebSocket updates to make the Org Chart re-render in real-time
+            await manager.broadcast_to_company(self.company_id, {"type": "org_updated"})
+
+            return f"Success: New agent '{name}' ({title}) hired successfully with ID #{new_agent.id} reporting to you."
+        except Exception as e:
+            return f"Error hiring agent: {str(e)}"

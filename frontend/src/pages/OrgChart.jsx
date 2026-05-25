@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { agentAPI } from "../services/api";
 import { 
   Network, 
@@ -129,9 +129,58 @@ export default function OrgChart() {
     }
   };
 
+  const socketRef = useRef(null);
+  const isMountedRef = useRef(true);
+
   useEffect(() => {
+    isMountedRef.current = true;
     fetchAgents();
+    connectWebSocket();
+
+    return () => {
+      isMountedRef.current = false;
+      if (socketRef.current) {
+        socketRef.current.onclose = null;
+        socketRef.current.close();
+      }
+    };
   }, []);
+
+  const connectWebSocket = () => {
+    const companyId = localStorage.getItem("companyId");
+    if (!companyId || !isMountedRef.current) return;
+
+    const token = localStorage.getItem("token");
+    const rawBackendUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+    const backendUrl = (rawBackendUrl.startsWith("http://") && !rawBackendUrl.includes("localhost") && !rawBackendUrl.includes("127.0.0.1"))
+      ? rawBackendUrl.replace("http://", "https://")
+      : rawBackendUrl;
+    const wsProtocol = backendUrl.startsWith("https") ? "wss" : "ws";
+    const wsHost = backendUrl.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    const wsUrl = `${wsProtocol}://${wsHost}/api/v1/ws/${companyId}${token ? `?token=${encodeURIComponent(token)}` : ""}`;
+    
+    const ws = new WebSocket(wsUrl);
+    socketRef.current = ws;
+
+    ws.onmessage = (event) => {
+      if (!isMountedRef.current) return;
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "org_updated") {
+          fetchAgents();
+        }
+      } catch (err) {
+        console.error("Failed to parse WebSocket message in OrgChart:", err);
+      }
+    };
+
+    ws.onclose = () => {
+      if (!isMountedRef.current) return;
+      setTimeout(() => {
+        if (isMountedRef.current) connectWebSocket();
+      }, 5000);
+    };
+  };
 
   const fetchAgents = async () => {
     try {
@@ -474,7 +523,8 @@ export default function OrgChart() {
                     { name: "read_write_file", label: "Read/Write File" },
                     { name: "run_bash_command", label: "Run Bash" },
                     { name: "publish_meta_campaign", label: "Meta Ads" },
-                    { name: "generate_image_asset", label: "Image Gen" }
+                    { name: "generate_image_asset", label: "Image Gen" },
+                    { name: "hire_agent", label: "Hire Agent" }
                   ].map(tool => {
                     const isChecked = selectedTools.includes(tool.name);
                     return (
