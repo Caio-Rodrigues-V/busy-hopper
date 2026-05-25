@@ -151,10 +151,26 @@ async def validate_api_credential(provider: str, api_key: str):
                     if resp.status_code == 200:
                         return
                     else:
-                        errors.append(f"{version}/{model}: {resp.status_code} - {resp.text}")
+                        errors.append(f"{version}/{model}: {resp.status_code}")
                 except Exception as e:
                     errors.append(f"{version}/{model}: {e}")
-            raise Exception(f"Gemini API Error details: {', '.join(errors)}")
+            
+            available_models = []
+            try:
+                list_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
+                list_resp = await client.get(list_url, timeout=10.0)
+                if list_resp.status_code == 200:
+                    data = list_resp.json()
+                    available_models = [m.get("name", "").replace("models/", "") for m in data.get("models", [])]
+            except Exception:
+                pass
+                
+            msg = f"Gemini API Error. Tentados {len(models_to_try)} modelos: {', '.join(errors)}."
+            if available_models:
+                msg += f" Modelos disponíveis para esta chave no Google: {available_models}"
+            else:
+                msg += " Nenhuma lista de modelos pôde ser recuperada do Google. Verifique se a chave foi criada no AI Studio e se a propagação já terminou."
+            raise Exception(msg)
     elif provider == "openrouter":
         import httpx
         models_to_try = [
