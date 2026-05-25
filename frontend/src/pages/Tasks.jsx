@@ -209,7 +209,7 @@ export default function Tasks() {
     { title: "Active Execution", status: "in_progress", color: "border-t-brand-accent", bg: "bg-brand-accent/5" },
     { title: "Success / Done", status: "done", color: "border-t-brand-secondary", bg: "bg-brand-secondary/5" },
     { title: "Failed / Paused", status: "failed", color: "border-t-brand-danger", bg: "bg-brand-danger/5" },
-    { title: "Approval Gate", status: "paused", color: "border-t-amber-500", bg: "bg-amber-500/5" },
+    { title: "Approval Gate", status: "paused", color: "border-t-brand-secondary", bg: "bg-brand-secondary/5" },
   ];
 
   return (
@@ -376,7 +376,7 @@ export default function Tasks() {
                         <span className="font-bold text-white text-sm">Run #{run.id} (Attempt {runs.length - idx})</span>
                         <div className="flex gap-2">
                           <span className="text-xs font-medium bg-dark-border px-2.5 py-1 rounded-lg text-white flex items-center gap-1">
-                            <Coins size={12} className="text-amber-500" />
+                            <Coins size={12} className="text-brand-secondary" />
                             <span>${run.total_cost_usd.toFixed(4)}</span>
                           </span>
                           <span className={`text-xs font-bold uppercase px-2.5 py-1 rounded-lg ${
@@ -401,7 +401,7 @@ export default function Tasks() {
                               {step.cost_usd > 0 && (
                                 <>
                                   <span>•</span>
-                                  <span className="text-amber-500 font-medium">${step.cost_usd.toFixed(5)}</span>
+                                  <span className="text-brand-secondary font-medium">${step.cost_usd.toFixed(5)}</span>
                                 </>
                               )}
                             </div>
@@ -424,7 +424,7 @@ export default function Tasks() {
 
                             {step.kind === "approval" && (
                               <div className="bg-dark-bg/60 border border-dark-border/50 rounded-xl p-3 mt-1.5 space-y-1 text-white/80 font-mono text-[10px]">
-                                <div className="text-amber-500 font-bold">BOARD APPROVAL ATTACHED</div>
+                                <div className="text-brand-secondary font-bold">BOARD APPROVAL ATTACHED</div>
                                 <div><strong>Action Category:</strong> {step.input?.action}</div>
                                 <div><strong>Output Result:</strong> {JSON.stringify(step.output?.result)}</div>
                               </div>

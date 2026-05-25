@@ -110,20 +110,24 @@ export default function Layout({ children }) {
   }
 
   return (
-    <div className="min-h-screen bg-dark-bg text-dark-text flex">
+    <div className="min-h-screen bg-dark-bg text-dark-text flex relative overflow-hidden">
+      {/* Ambient Glows */}
+      <div className="glow-spot w-[500px] h-[500px] bg-brand-primary/5 top-[-150px] right-[-150px] animate-pulse-slow"></div>
+      <div className="glow-spot w-[600px] h-[600px] bg-brand-primary/5 -bottom-[200px] -left-[200px] animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
+
       {/* Sidebar */}
-      <aside className="w-64 bg-dark-card border-r border-dark-border flex flex-col justify-between shrink-0">
+      <aside className="w-64 bg-dark-card/65 backdrop-blur-md border-r border-dark-border/40 flex flex-col justify-between shrink-0 relative z-10">
         <div>
           {/* Logo */}
-          <div className="h-16 border-b border-dark-border px-6 flex items-center gap-3">
-            <div className="w-8 h-8 bg-brand-primary/15 rounded-lg border border-brand-primary/40 flex items-center justify-center text-brand-primary font-bold">
+          <div className="h-16 border-b border-dark-border/40 px-6 flex items-center gap-3">
+            <div className="w-8 h-8 bg-brand-primary/15 rounded-lg border border-brand-primary/40 flex items-center justify-center text-brand-primary font-bold shadow-lg shadow-brand-primary/10">
               A
             </div>
             <span className="font-bold text-white text-lg tracking-tight">Antigravity</span>
           </div>
 
           {/* Company Selector */}
-          <div className="p-4 border-b border-dark-border">
+          <div className="p-4 border-b border-dark-border/40">
             <label className="block text-[10px] font-bold uppercase tracking-wider text-dark-muted mb-2">
               Active Enterprise
             </label>
@@ -131,7 +135,7 @@ export default function Layout({ children }) {
               <select
                 value={selectedCompanyId}
                 onChange={handleCompanyChange}
-                className="w-full bg-dark-bg border border-dark-border rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-primary"
+                className="w-full bg-dark-bg border border-dark-border/60 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-primary transition-colors"
               >
                 {companies.map(c => (
                   <option key={c.id} value={c.id}>{c.name}</option>
@@ -139,7 +143,7 @@ export default function Layout({ children }) {
               </select>
               <button 
                 onClick={() => setShowCreateModal(true)}
-                className="bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary border border-brand-primary/30 p-2.5 rounded-xl transition-colors"
+                className="bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary border border-brand-primary/30 p-2.5 rounded-xl transition-all shadow-md hover:shadow-brand-primary/5"
                 title="Create Company"
               >
                 <Plus size={16} />
@@ -156,10 +160,10 @@ export default function Layout({ children }) {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-350 ${
                     isActive 
-                      ? "bg-brand-primary/10 text-brand-primary border border-brand-primary/20" 
-                      : "text-dark-muted hover:text-white hover:bg-dark-border/35"
+                      ? "bg-brand-primary/15 text-brand-primary border border-brand-primary/30 glow-orange" 
+                      : "text-dark-muted hover:text-white hover:bg-dark-border/30 border border-transparent"
                   }`}
                 >
                   <Icon size={18} />
@@ -171,7 +175,7 @@ export default function Layout({ children }) {
         </div>
 
         {/* Footer info & logout */}
-        <div className="p-4 border-t border-dark-border">
+        <div className="p-4 border-t border-dark-border/40">
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-brand-danger hover:bg-brand-danger/10 transition-colors border border-transparent hover:border-brand-danger/20"
@@ -183,9 +187,9 @@ export default function Layout({ children }) {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 relative z-10">
         {/* Header */}
-        <header className="h-16 border-b border-dark-border px-8 flex items-center justify-between bg-dark-card/50 backdrop-blur-md sticky top-0 z-20">
+        <header className="h-16 border-b border-dark-border/40 px-8 flex items-center justify-between bg-dark-card/40 backdrop-blur-md sticky top-0 z-20">
           <div className="flex items-center gap-2 text-xs text-dark-muted font-medium">
             <Building2 size={14} />
             <span>Control Plane</span>
@@ -194,8 +198,9 @@ export default function Layout({ children }) {
               {companies.find(c => c.id.toString() === selectedCompanyId)?.name || "New Company"}
             </span>
           </div>
-          <div className="text-xs text-dark-muted bg-dark-bg border border-dark-border px-3 py-1.5 rounded-lg">
-            Status: <span className="text-brand-secondary font-bold">Online</span>
+          <div className="text-xs text-dark-muted bg-dark-bg border border-dark-border/60 px-3 py-1.5 rounded-lg flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-brand-primary rounded-full animate-pulse-dot"></span>
+            Status: <span className="text-brand-secondary font-semibold">Online</span>
           </div>
         </header>
 

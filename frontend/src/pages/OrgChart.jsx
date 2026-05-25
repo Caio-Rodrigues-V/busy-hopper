@@ -210,33 +210,34 @@ export default function OrgChart() {
     return (
       <div className="flex flex-col items-center">
         {/* Agent Card */}
-        <div className="glass-panel rounded-2xl p-5 w-80 text-left border border-dark-border/80 relative transition-transform hover:-translate-y-1 duration-300">
+        <div className="glass-card rounded-2xl p-5 w-80 text-left border border-dark-border/60 relative">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-brand-primary/10 border border-brand-primary/30 rounded-xl flex items-center justify-center text-brand-primary">
+              <div className="w-10 h-10 bg-brand-primary/10 border border-brand-primary/30 rounded-xl flex items-center justify-center text-brand-primary shadow-inner">
                 <User size={20} />
               </div>
               <div>
-                <h4 className="font-bold text-white text-base">{agent.name}</h4>
+                <h4 className="font-bold text-white text-base tracking-tight">{agent.name}</h4>
                 <p className="text-xs text-dark-muted font-medium">{agent.title}</p>
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                agent.status === 'active' ? 'bg-brand-secondary/10 text-brand-secondary' : 'bg-brand-danger/10 text-brand-danger'
+              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${
+                agent.status === 'active' ? 'bg-brand-primary/15 text-brand-primary border border-brand-primary/20' : 'bg-brand-danger/15 text-brand-danger border border-brand-danger/20'
               }`}>
+                {agent.status === 'active' && <span className="w-1 h-1 bg-brand-primary rounded-full animate-pulse-dot" />}
                 {agent.status}
               </span>
               <button
                 onClick={() => setInspectedAgent(agent)}
-                className="text-brand-primary hover:bg-brand-primary/10 p-1.5 rounded-lg transition-colors border border-transparent hover:border-brand-primary/20"
+                className="text-brand-primary hover:bg-brand-primary/10 p-1.5 rounded-lg transition-all border border-transparent hover:border-brand-primary/25"
                 title="Inspect Agent Work"
               >
                 <Layers size={13} />
               </button>
               <button
                 onClick={() => handleDeleteAgent(agent.id)}
-                className="text-brand-danger hover:bg-brand-danger/10 p-1.5 rounded-lg transition-colors border border-transparent hover:border-brand-danger/20"
+                className="text-brand-danger hover:bg-brand-danger/10 p-1.5 rounded-lg transition-all border border-transparent hover:border-brand-danger/25"
                 title="Fire Agent"
               >
                 <Trash2 size={13} />
@@ -247,7 +248,7 @@ export default function OrgChart() {
           <div className="space-y-2 border-t border-dark-border/40 pt-3 text-xs text-dark-muted">
             <div className="flex justify-between">
               <span>Model:</span>
-              <span className="font-semibold text-white">{agent.model}</span>
+              <span className="font-mono text-white text-[11px] bg-dark-bg px-2 py-0.5 rounded border border-dark-border/60">{agent.model}</span>
             </div>
             <div className="flex justify-between">
               <span>Monthly Budget:</span>
@@ -258,7 +259,7 @@ export default function OrgChart() {
               <div className="flex flex-wrap gap-1">
                 {agent.tools.length > 0 ? (
                   agent.tools.map(tool => (
-                    <span key={tool} className="bg-dark-border/40 border border-dark-border px-1.5 py-0.5 rounded text-[9px] text-white">
+                    <span key={tool} className="bg-dark-border/30 border border-dark-border/60 px-1.5 py-0.5 rounded text-[9px] text-white font-mono">
                       {tool}
                     </span>
                   ))
@@ -273,9 +274,9 @@ export default function OrgChart() {
         {/* Connector lines and subordinates */}
         {subordinates.length > 0 && (
           <div className="flex flex-col items-center mt-6 w-full">
-            {/* Downward line */}
-            <div className="w-0.5 h-6 bg-brand-primary/40 mb-6 flex items-center justify-center">
-              <ArrowDown size={12} className="text-brand-primary/60 shrink-0 translate-y-1" />
+            {/* Downward line with premium glow gradient */}
+            <div className="w-[2px] h-8 org-line mb-4 relative flex items-center justify-center">
+              <ArrowDown size={14} className="text-brand-primary shrink-0 translate-y-2.5 drop-shadow-[0_0_5px_rgba(255,85,0,0.5)]" />
             </div>
             
             {/* Children grid */}

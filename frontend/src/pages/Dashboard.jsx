@@ -89,14 +89,14 @@ export default function Dashboard() {
 
   const { kpis, cost_over_time, agent_metrics } = metrics;
 
-  // Colors for donut chart
-  const PIE_COLORS = ["#10B981", "#EF4444"];
+  // Colors for donut chart (strictly Orange and Black/Dark Gray)
+  const PIE_COLORS = ["#FF5500", "#1D1D24"];
 
   // Helper for agent status badges
   const getStatusBadge = (status) => {
     switch (status) {
       case "active":
-        return <span className="bg-brand-secondary/15 text-brand-secondary border border-brand-secondary/20 px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider">Active</span>;
+        return <span className="bg-brand-primary/15 text-brand-primary border border-brand-primary/20 px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider">Active</span>;
       case "paused":
         return <span className="bg-brand-accent/15 text-brand-accent border border-brand-accent/20 px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider">Paused</span>;
       case "exhausted":
@@ -106,15 +106,15 @@ export default function Dashboard() {
     }
   };
 
-  // Helper for Health classifications
+  // Helper for Health classifications (strictly Orange/Black spectrum)
   const getHealthBadge = (health) => {
     switch (health) {
       case "green":
-        return <span className="flex items-center gap-1.5 text-brand-secondary font-semibold text-sm"><Heart size={14} fill="#10B981" /> Healthy</span>;
+        return <span className="flex items-center gap-1.5 text-brand-primary font-semibold text-sm"><Heart size={14} fill="#FF5500" stroke="#FF5500" /> Healthy</span>;
       case "yellow":
-        return <span className="flex items-center gap-1.5 text-brand-accent font-semibold text-sm"><AlertTriangle size={14} fill="#8B5CF6" /> Warning</span>;
+        return <span className="flex items-center gap-1.5 text-brand-accent font-semibold text-sm"><AlertTriangle size={14} fill="#FF9F40" stroke="#FF9F40" /> Warning</span>;
       case "red":
-        return <span className="flex items-center gap-1.5 text-brand-danger font-semibold text-sm"><AlertTriangle size={14} fill="#EF4444" /> Critical</span>;
+        return <span className="flex items-center gap-1.5 text-brand-danger font-semibold text-sm"><AlertTriangle size={14} fill="#FF3300" stroke="#FF3300" /> Critical</span>;
       default:
         return <span>{health}</span>;
     }
@@ -207,13 +207,13 @@ export default function Dashboard() {
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height={320}>
               <LineChart data={cost_over_time}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1E2D4A" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#1D1D24" />
                 <XAxis dataKey="date" stroke="#9CA3AF" tick={{ fontSize: 10 }} />
                 <YAxis stroke="#9CA3AF" tick={{ fontSize: 10 }} />
-                <Tooltip contentStyle={{ backgroundColor: "#131C2E", borderColor: "#1E2D4A" }} />
+                <Tooltip contentStyle={{ backgroundColor: "#0E0E12", borderColor: "#1D1D24" }} />
                 <Legend />
-                <Line type="monotone" dataKey="cost" name="Custo Real API" stroke="#3B82F6" strokeWidth={2} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="markup_cost" name="Preço Final (Markup)" stroke="#8B5CF6" strokeWidth={2} />
+                <Line type="monotone" dataKey="cost" name="Custo Real API" stroke="#FF5500" strokeWidth={2} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="markup_cost" name="Preço Final (Markup)" stroke="#FF9F40" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -225,13 +225,13 @@ export default function Dashboard() {
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height={320}>
               <BarChart data={agent_metrics}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1E2D4A" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#1D1D24" />
                 <XAxis dataKey="name" stroke="#9CA3AF" tick={{ fontSize: 10 }} />
                 <YAxis stroke="#9CA3AF" tick={{ fontSize: 10 }} />
-                <Tooltip contentStyle={{ backgroundColor: "#131C2E", borderColor: "#1E2D4A" }} />
+                <Tooltip contentStyle={{ backgroundColor: "#0E0E12", borderColor: "#1D1D24" }} />
                 <Legend />
-                <Bar dataKey="cost" name="Custo Real API ($)" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="markup_cost" name="Preço com Markup ($)" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="cost" name="Custo Real API ($)" fill="#FF5500" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="markup_cost" name="Preço com Markup ($)" fill="#FF7A00" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -243,11 +243,11 @@ export default function Dashboard() {
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height={320}>
               <BarChart data={agent_metrics}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1E2D4A" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#1D1D24" />
                 <XAxis dataKey="name" stroke="#9CA3AF" tick={{ fontSize: 10 }} />
                 <YAxis stroke="#9CA3AF" tick={{ fontSize: 10 }} />
-                <Tooltip contentStyle={{ backgroundColor: "#131C2E", borderColor: "#1E2D4A" }} />
-                <Bar dataKey="latency" name="Latency (ms)" fill="#F59E0B" radius={[4, 4, 0, 0]} />
+                <Tooltip contentStyle={{ backgroundColor: "#0E0E12", borderColor: "#1D1D24" }} />
+                <Bar dataKey="latency" name="Latency (ms)" fill="#FF9F40" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -272,20 +272,20 @@ export default function Dashboard() {
                     paddingAngle={5}
                     dataKey="value"
                   >
-                    <Cell fill="#10B981" />
-                    <Cell fill="#EF4444" />
+                    <Cell fill="#FF5500" />
+                    <Cell fill="#1D1D24" />
                   </Pie>
-                  <Tooltip contentStyle={{ backgroundColor: "#131C2E", borderColor: "#1E2D4A" }} />
+                  <Tooltip contentStyle={{ backgroundColor: "#0E0E12", borderColor: "#1D1D24" }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
             <div className="space-y-2 text-sm text-dark-muted font-medium ml-4">
               <div className="flex items-center gap-2">
-                <div className="w-3.5 h-3.5 bg-brand-secondary rounded-full" />
+                <div className="w-3.5 h-3.5 bg-brand-primary rounded-full" />
                 <span>Success: {agent_metrics.reduce((acc, curr) => acc + curr.success, 0)} runs</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3.5 h-3.5 bg-brand-danger rounded-full" />
+                <div className="w-3.5 h-3.5 bg-dark-border rounded-full" />
                 <span>Failed: {agent_metrics.reduce((acc, curr) => acc + curr.failed, 0)} runs</span>
               </div>
             </div>

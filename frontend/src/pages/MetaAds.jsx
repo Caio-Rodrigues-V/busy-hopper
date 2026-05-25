@@ -311,7 +311,7 @@ export default function MetaAds() {
 
               {!isConfigured ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-dark-bg/40 border border-dark-border/40 rounded-xl min-h-[250px]">
-                  <AlertTriangle className="text-brand-warning mb-3" size={32} />
+                  <AlertTriangle className="text-brand-secondary mb-3" size={32} />
                   <h4 className="text-white font-bold text-sm mb-1.5">Meta Integration Required</h4>
                   <p className="text-xs text-dark-muted max-w-xs">
                     Please configure and save your Meta API Access Token and Ad Account ID in the left settings pane to unlock deployment capabilities.
