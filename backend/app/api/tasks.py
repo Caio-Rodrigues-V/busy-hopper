@@ -65,7 +65,7 @@ async def debug_db(db: AsyncSession = Depends(get_db)):
 async def debug_workspace():
     import os
     workspace_dir = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "..", "..", "workspace", "company_6")
+        os.path.join(os.path.dirname(__file__), "..", "..", "workspace", "company_6")
     )
     if not os.path.exists(workspace_dir):
         return {"error": f"Workspace dir does not exist: {workspace_dir}"}
