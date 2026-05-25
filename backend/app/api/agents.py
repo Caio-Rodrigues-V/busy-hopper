@@ -235,3 +235,138 @@ async def get_agent_artifact(
         media_type = "application/json"
         
     return FileResponse(target_path, media_type=media_type)
+
+@router.post("/import-openclaw", response_model=AgentResponse)
+async def import_openclaw_agent(
+    payload: dict,
+    db: AsyncSession = Depends(get_db),
+    company: Company = Depends(get_current_company),
+    current_user: User = Depends(get_current_user)
+):
+    # Retrieve config object
+    config = payload.get("openclaw_config") or payload
+    if not config:
+        raise HTTPException(status_code=400, detail="Invalid import payload. 'openclaw_config' or direct configuration required.")
+
+    # Resolve gateway or agent nested structure
+    if "gateway" in config and isinstance(config["gateway"], dict):
+        agent_data = config["gateway"]
+    elif "agent" in config and isinstance(config["agent"], dict):
+        agent_data = config["agent"]
+    else:
+        agent_data = config
+
+    # Extract fields
+    name = agent_data.get("name") or agent_data.get("agent_name") or "Imported OpenClaw Agent"
+    title = agent_data.get("title") or agent_data.get("role") or "OpenClaw Assistant"
+    
+    role_prompt = (
+        agent_data.get("system_prompt") or 
+        agent_data.get("instructions") or 
+        agent_data.get("role_prompt") or 
+        agent_data.get("system") or
+        "You are an imported OpenClaw assistant."
+    )
+    
+    raw_model = agent_data.get("model") or "gpt-4o-mini"
+    from app.services.agent_executor import get_provider_for_model
+    adapter_type = get_provider_for_model(raw_model)
+    
+    # Temperature
+    temp = 0.0
+    if "temperature" in agent_data:
+        try:
+            temp = float(agent_data["temperature"])
+        except (ValueError, TypeError):
+            pass
+
+    # Budget
+    budget = 50.0
+    if "monthly_budget_usd" in agent_data:
+        try:
+            budget = float(agent_data["monthly_budget_usd"])
+        except (ValueError, TypeError):
+            pass
+            
+    # Tools mapping
+    raw_tools = agent_data.get("allowed_tools") or agent_data.get("tools") or agent_data.get("skills") or []
+    if isinstance(raw_tools, str):
+        raw_tools = [t.strip() for t in raw_tools.split(",") if t.strip()]
+
+    mapped_tools = []
+    tool_mappings = {
+        "shell": "run_bash_command",
+        "bash": "run_bash_command",
+        "cmd": "run_bash_command",
+        "run_bash_command": "run_bash_command",
+        "file": "read_write_file",
+        "file_management": "read_write_file",
+        "read_write_file": "read_write_file",
+        "web": "web_search",
+        "web_search": "web_search",
+        "search": "web_search",
+        "delegate": "delegate_task",
+        "delegate_task": "delegate_task",
+        "approval": "request_approval",
+        "request_approval": "request_approval",
+        "meta": "publish_meta_campaign",
+        "publish_meta_campaign": "publish_meta_campaign",
+        "image": "generate_image_asset",
+        "generate_image_asset": "generate_image_asset",
+        "hiring": "hire_agent",
+        "hire_agent": "hire_agent"
+    }
+
+    for t in raw_tools:
+        clean_t = str(t).lower().strip()
+        if clean_t in tool_mappings:
+            mapped_t = tool_mappings[clean_t]
+            if mapped_t not in mapped_tools:
+                mapped_tools.append(mapped_t)
+
+    # Add default safety tools
+    if "delegate_task" not in mapped_tools:
+        mapped_tools.append("delegate_task")
+    if "request_approval" not in mapped_tools:
+        mapped_tools.append("request_approval")
+
+    # Reporting line boss agent validation
+    boss_agent_id = payload.get("boss_agent_id")
+    if boss_agent_id:
+        try:
+            boss_agent_id = int(boss_agent_id)
+            boss_res = await db.execute(select(Agent).filter(Agent.id == boss_agent_id, Agent.company_id == company.id))
+            boss = boss_res.scalars().first()
+            if not boss:
+                boss_agent_id = None
+        except (ValueError, TypeError):
+            boss_agent_id = None
+
+    # Save to database
+    new_agent = Agent(
+        company_id=company.id,
+        name=name,
+        title=title,
+        role_prompt=role_prompt,
+        boss_agent_id=boss_agent_id,
+        adapter_type=adapter_type,
+        model=raw_model,
+        temperature=temp,
+        tools=mapped_tools,
+        monthly_budget_usd=budget,
+        status="active"
+    )
+    db.add(new_agent)
+    await db.commit()
+    await db.refresh(new_agent)
+
+    await create_audit_entry(
+        db, company.id, f"user_{current_user.id}",
+        "IMPORT_OPENCLAW_AGENT", {"agent_id": new_agent.id, "name": name, "title": title}
+    )
+    
+    # WebSocket broadcast
+    from app.services.websocket_manager import manager
+    await manager.broadcast_to_company(company.id, {"type": "org_updated"})
+
+    return new_agent

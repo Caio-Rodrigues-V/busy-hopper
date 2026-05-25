@@ -78,6 +78,7 @@ export const agentAPI = {
   delete: (id) => api.delete(`/agents/${id}`),
   getArtifacts: (agentId) => api.get(`/agents/${agentId}/artifacts`),
   getArtifactContent: (agentId, filename, type = 'text') => api.get(`/agents/${agentId}/artifacts/${filename}`, { responseType: type }),
+  importOpenClaw: (data) => api.post("/agents/import-openclaw", data),
 };
 
 export const taskAPI = {

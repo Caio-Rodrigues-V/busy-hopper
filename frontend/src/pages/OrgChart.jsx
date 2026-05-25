@@ -21,6 +21,10 @@ export default function OrgChart() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [openClawText, setOpenClawText] = useState("");
+  const [importBossId, setImportBossId] = useState("");
+  const [importing, setImporting] = useState(false);
 
   // Form states for adding a new agent
   const [name, setName] = useState("");
@@ -193,6 +197,39 @@ export default function OrgChart() {
     }
   };
 
+  const handleImportOpenClaw = async (e) => {
+    e.preventDefault();
+    if (!openClawText.trim()) {
+      alert("Please paste the OpenClaw configuration JSON.");
+      return;
+    }
+
+    setImporting(true);
+    try {
+      // Strip comments
+      let cleanJsonText = openClawText
+        .replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '$1')
+        .trim();
+      
+      const configObj = JSON.parse(cleanJsonText);
+      const res = await agentAPI.importOpenClaw({
+        openclaw_config: configObj,
+        boss_agent_id: importBossId || null
+      });
+
+      alert(`Agent '${res.data.name}' imported successfully!`);
+      setShowImportModal(false);
+      setOpenClawText("");
+      setImportBossId("");
+      fetchAgents();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to parse or import OpenClaw agent configuration. Ensure it is valid JSON.");
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const handleToolToggle = (toolName) => {
     if (selectedTools.includes(toolName)) {
       setSelectedTools(selectedTools.filter(t => t !== toolName));
@@ -358,13 +395,21 @@ export default function OrgChart() {
             Visual tree mapping reporting structure, individual agent prompts, temperatures, cost caps, and granular system tools.
           </p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-brand-primary hover:bg-brand-primary/95 text-white font-semibold rounded-xl px-5 py-3 text-sm transition-colors shadow-lg shadow-brand-primary/20 flex items-center gap-2"
-        >
-          <Plus size={16} />
-          <span>Hire New Agent</span>
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="bg-dark-bg/60 border border-dark-border hover:border-brand-primary text-white font-semibold rounded-xl px-5 py-3 text-sm transition-all flex items-center gap-2"
+          >
+            <span>Import OpenClaw</span>
+          </button>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="bg-brand-primary hover:bg-brand-primary/95 text-white font-semibold rounded-xl px-5 py-3 text-sm transition-colors shadow-lg shadow-brand-primary/20 flex items-center gap-2"
+          >
+            <Plus size={16} />
+            <span>Hire New Agent</span>
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -772,6 +817,72 @@ export default function OrgChart() {
               )}
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Import OpenClaw Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-2xl glass-panel rounded-2xl p-8 relative shadow-2xl my-8 border border-brand-primary/20">
+            <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+              <span>Import OpenClaw Agent</span>
+            </h2>
+            <p className="text-dark-muted text-sm mb-6">Paste your <code>openclaw.json</code> config file content below to register your agent in the organization.</p>
+            
+            <form onSubmit={handleImportOpenClaw} className="space-y-5">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
+                  Reporting Manager (Boss Agent)
+                </label>
+                <select
+                  value={importBossId}
+                  onChange={(e) => setImportBossId(e.target.value)}
+                  className="w-full bg-dark-bg border border-dark-border focus:border-brand-primary rounded-xl px-3 py-3 text-white text-sm outline-none"
+                >
+                  <option value="">No Reporting Manager (Root/CEO)</option>
+                  {agents.map(a => (
+                    <option key={a.id} value={a.id}>{a.name} ({a.title})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
+                  openclaw.json Configuration Content
+                </label>
+                <textarea
+                  required
+                  rows={10}
+                  value={openClawText}
+                  onChange={(e) => setOpenClawText(e.target.value)}
+                  className="w-full bg-dark-bg border border-dark-border focus:border-brand-primary rounded-xl px-4 py-3 text-white text-sm outline-none font-mono"
+                  placeholder={`{\n  "gateway": {\n    "name": "Traffic Specialist",\n    "model": "gpt-4o-mini",\n    "system_prompt": "Manage Meta ad accounts...",\n    "allowed_tools": ["shell", "web"]\n  }\n}`}
+                />
+              </div>
+
+              <div className="flex justify-end gap-3.5 pt-4 border-t border-dark-border/40">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowImportModal(false);
+                    setOpenClawText("");
+                    setImportBossId("");
+                  }}
+                  className="px-5 py-3 rounded-xl border border-dark-border hover:bg-dark-bg text-dark-muted hover:text-white font-semibold text-sm transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={importing}
+                  className="px-6 py-3 rounded-xl bg-brand-primary hover:bg-brand-primary/95 text-white font-bold text-sm shadow-lg shadow-brand-primary/10 transition-colors flex items-center gap-2"
+                >
+                  {importing ? <Loader2 size={16} className="animate-spin" /> : null}
+                  <span>Import Agent</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
