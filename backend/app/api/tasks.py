@@ -193,7 +193,7 @@ async def debug_gemini(db: AsyncSession = Depends(get_db)):
     url1 = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
     headers1 = {"Authorization": f"Bearer {api_key}"}
     payload = {
-        "model": "gemini-2.5-flash",
+        "model": "gemini-2.0-flash",
         "messages": [{"role": "user", "content": "ping"}],
         "max_tokens": 5
     }
