@@ -16,7 +16,7 @@ export default function Register() {
     e.preventDefault();
     setError("");
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError("As senhas não coincidem.");
       return;
     }
     setLoading(true);
@@ -27,7 +27,7 @@ export default function Register() {
         navigate("/login");
       }, 2000);
     } catch (err) {
-      setError(err.response?.data?.detail || "Registration failed. Try again.");
+      setError(err.response?.data?.detail || "Falha no registro. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -42,8 +42,8 @@ export default function Register() {
           <div className="inline-flex p-3 bg-brand-accent/10 rounded-full text-brand-accent mb-3">
             <ShieldCheck size={32} />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">Create Account</h1>
-          <p className="text-dark-muted text-sm mt-1">Register board details to establish a company</p>
+          <h1 className="text-3xl font-bold tracking-tight text-white">Criar Conta</h1>
+          <p className="text-dark-muted text-sm mt-1">Registre as credenciais administrativas para estabelecer a empresa</p>
         </div>
 
         {error && (
@@ -56,14 +56,14 @@ export default function Register() {
         {success && (
           <div className="mb-6 p-4 bg-brand-secondary/10 border border-brand-secondary/30 rounded-xl flex items-center gap-3 text-brand-secondary text-sm relative z-10">
             <ShieldCheck size={20} className="shrink-0" />
-            <span>Registration successful! Redirecting to login...</span>
+            <span>Registro realizado com sucesso! Redirecionando para o login...</span>
           </div>
         )}
 
         <form onSubmit={handleRegister} className="space-y-5 relative z-10">
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-              Email Address
+              Endereço de E-mail
             </label>
             <input
               type="email"
@@ -71,13 +71,13 @@ export default function Register() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-dark-bg/60 border border-dark-border focus:border-brand-accent rounded-xl px-4 py-3 text-white text-sm outline-none transition-colors"
-              placeholder="name@autonomous.corp"
+              placeholder="nome@empresa.com"
             />
           </div>
 
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-              Password
+              Senha
             </label>
             <input
               type="password"
@@ -91,7 +91,7 @@ export default function Register() {
 
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-              Confirm Password
+              Confirmar Senha
             </label>
             <input
               type="password"
@@ -108,14 +108,14 @@ export default function Register() {
             disabled={loading || success}
             className="w-full bg-brand-accent hover:bg-brand-accent/95 text-white font-semibold rounded-xl py-3 text-sm outline-none transition-colors shadow-lg shadow-brand-accent/20 flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            {loading ? "Registering..." : "Create Board Account"}
+            {loading ? "Registrando..." : "Criar Conta Administrativa"}
           </button>
         </form>
 
         <div className="text-center mt-6 text-sm text-dark-muted relative z-10">
-          <span>Already registered? </span>
+          <span>Já é registrado? </span>
           <Link to="/login" className="text-brand-accent hover:underline font-medium">
-            Login here
+            Entrar aqui
           </Link>
         </div>
       </div>

@@ -21,7 +21,7 @@ export default function Login() {
       // Auto redirect to dashboard
       navigate("/");
     } catch (err) {
-      setError(err.response?.data?.detail || "Authentication failed. Check your credentials.");
+      setError(err.response?.data?.detail || "Falha na autenticação. Verifique suas credenciais.");
     } finally {
       setLoading(false);
     }
@@ -38,7 +38,7 @@ export default function Login() {
             <ShieldCheck size={32} className="animate-pulse" />
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-white">Antigravity</h1>
-          <p className="text-dark-muted text-sm mt-1">Autonomous AI Agent Orchestrator Control Plane</p>
+          <p className="text-dark-muted text-sm mt-1">Painel de Controle do Orquestrador de Agentes de IA Autônomos</p>
         </div>
 
         {error && (
@@ -51,7 +51,7 @@ export default function Login() {
         <form onSubmit={handleLogin} className="space-y-5 relative z-10">
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-              Email Address
+              Endereço de E-mail
             </label>
             <input
               type="email"
@@ -59,13 +59,13 @@ export default function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-dark-bg/60 border border-dark-border focus:border-brand-primary rounded-xl px-4 py-3 text-white text-sm outline-none transition-colors"
-              placeholder="name@autonomous.corp"
+              placeholder="nome@empresa.com"
             />
           </div>
 
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-              Password
+              Senha
             </label>
             <input
               type="password"
@@ -82,14 +82,14 @@ export default function Login() {
             disabled={loading}
             className="w-full bg-brand-primary hover:bg-brand-primary/95 text-white font-semibold rounded-xl py-3 text-sm outline-none transition-colors shadow-lg shadow-brand-primary/20 flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            {loading ? "Establishing session..." : "Login to Control Plane"}
+            {loading ? "Estabelecendo sessão..." : "Entrar no Painel de Controle"}
           </button>
         </form>
 
         <div className="text-center mt-6 text-sm text-dark-muted relative z-10">
-          <span>New company? </span>
+          <span>Empresa nova? </span>
           <Link to="/register" className="text-brand-primary hover:underline font-medium">
-            Register Board Account
+            Registrar Conta Administrativa
           </Link>
         </div>
       </div>

@@ -80,32 +80,28 @@ export default function MetaAds() {
   const handleSaveConfig = async (e) => {
     e.preventDefault();
     if (!config.access_token || !config.ad_account_id) {
-      alert("Access Token and Ad Account ID are required.");
+      alert("Token de acesso e ID da Conta de Anúncios são obrigatórios.");
       return;
     }
     
     setSavingConfig(true);
     try {
-      // If user hasn't edited the token (still showing dots), we send a dummy or ignore token update,
-      // but to keep it simple, if token starts with bullet points, we might warn them.
       let tokenToSend = config.access_token;
       if (tokenToSend.startsWith("••••")) {
-        // If it's unchanged, just preserve the token by not sending bullet points.
-        // For simplicity, we assume they enter a new token if configuring.
         if (isConfigured) {
-          alert("Please enter a new access token if you are modifying settings, or write your token.");
+          alert("Por favor, insira um novo token de acesso se você estiver modificando as configurações, ou informe seu token.");
           setSavingConfig(false);
           return;
         }
       }
 
       await metaAPI.saveConfig(config);
-      alert("Meta integration configuration saved successfully!");
+      alert("Configuração da integração do Meta salva com sucesso!");
       setIsConfigured(true);
       fetchMetaData();
     } catch (err) {
       console.error(err);
-      alert("Failed to save Meta Ads configurations.");
+      alert("Falha ao salvar as configurações do Meta Ads.");
     } finally {
       setSavingConfig(false);
     }
@@ -114,11 +110,11 @@ export default function MetaAds() {
   const handleDeployCampaign = async (e) => {
     e.preventDefault();
     if (!isConfigured) {
-      alert("Please configure your Meta Integration before deploying campaigns.");
+      alert("Por favor, configure sua Integração com o Meta antes de publicar campanhas.");
       return;
     }
     if (!campaign.campaign_name || campaign.daily_budget_usd <= 0) {
-      alert("Invalid campaign parameters.");
+      alert("Parâmetros de campanha inválidos.");
       return;
     }
 
@@ -136,7 +132,7 @@ export default function MetaAds() {
       setCampaigns(campaignsRes.data);
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.detail || "Failed to deploy campaign simulation.");
+      alert(err.response?.data?.detail || "Falha ao publicar a simulação da campanha.");
     } finally {
       setDeployingCampaign(false);
     }
@@ -146,7 +142,7 @@ export default function MetaAds() {
     return (
       <div className="h-96 flex flex-col items-center justify-center gap-3 text-dark-muted">
         <Loader2 size={32} className="animate-spin text-brand-primary" />
-        <span>Loading Meta Integration console...</span>
+        <span>Carregando console de Integração com o Meta...</span>
       </div>
     );
   }
@@ -158,10 +154,10 @@ export default function MetaAds() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white mb-2 flex items-center gap-3">
             <Megaphone className="text-brand-primary" size={32} />
-            <span>Meta Ads Orchestrator</span>
+            <span>Orquestrador de Meta Ads</span>
           </h1>
           <p className="text-dark-muted text-sm max-w-2xl">
-            Configure integration tokens, set up ad account targets, and deploy paid traffic campaigns (Facebook & Instagram ads) either manually or via autonomous agents.
+            Configure tokens de integração, contas de anúncios de destino e publique campanhas de tráfego pago (Facebook & Instagram) manualmente ou através de agentes autônomos.
           </p>
         </div>
 
@@ -172,7 +168,7 @@ export default function MetaAds() {
             : "bg-brand-danger/10 border-brand-danger/30 text-brand-danger"
         }`}>
           <span className={`w-2.5 h-2.5 rounded-full ${isConfigured ? "bg-brand-secondary animate-pulse" : "bg-brand-danger"}`} />
-          <span>{isConfigured ? "Meta Integration Active" : "Meta Config Pending"}</span>
+          <span>{isConfigured ? "Integração Meta Ativa" : "Configuração Meta Pendente"}</span>
         </div>
       </div>
 
@@ -186,7 +182,7 @@ export default function MetaAds() {
               : "border-transparent text-dark-muted hover:text-white"
           }`}
         >
-          Control Console
+          Console de Controle
         </button>
         <button
           onClick={() => setActiveTab("campaigns")}
@@ -196,7 +192,7 @@ export default function MetaAds() {
               : "border-transparent text-dark-muted hover:text-white"
           }`}
         >
-          <span>Deployed Campaigns</span>
+          <span>Campanhas Publicadas</span>
           <span className="bg-dark-border text-white text-[10px] px-2 py-0.5 rounded-full font-mono">
             {campaigns.length}
           </span>
@@ -210,13 +206,13 @@ export default function MetaAds() {
           <div className="glass-panel rounded-2xl p-6 space-y-6">
             <div className="flex items-center gap-2 pb-4 border-b border-dark-border/40">
               <Settings className="text-brand-primary" size={18} />
-              <h3 className="text-sm font-bold uppercase tracking-wider text-white">Meta API Connection Settings</h3>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-white">Configurações de Conexão da API do Meta</h3>
             </div>
 
             <form onSubmit={handleSaveConfig} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-                  Meta System User Access Token
+                  Token de Acesso do Usuário do Sistema Meta
                 </label>
                 <div className="relative">
                   <input
@@ -235,13 +231,13 @@ export default function MetaAds() {
                     {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-                <p className="text-[10px] text-dark-muted mt-1.5">Facebook Graph API token representing a system user with Ads Management scopes.</p>
+                <p className="text-[10px] text-dark-muted mt-1.5">Token da API do Facebook Graph representando um usuário do sistema com permissões de Gerenciamento de Anúncios.</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-                    Meta Ad Account ID
+                    ID da Conta de Anúncios do Meta
                   </label>
                   <input
                     type="text"
@@ -249,38 +245,38 @@ export default function MetaAds() {
                     value={config.ad_account_id}
                     onChange={(e) => setConfig({ ...config, ad_account_id: e.target.value })}
                     className="w-full bg-dark-bg border border-dark-border focus:border-brand-primary rounded-xl px-4 py-3 text-white text-sm outline-none transition-colors font-mono"
-                    placeholder="e.g. 1029384756"
+                    placeholder="ex: 1029384756"
                   />
-                  <p className="text-[9px] text-dark-muted mt-1">Specify numeric account ID (excluding act_ prefix).</p>
+                  <p className="text-[9px] text-dark-muted mt-1">Especifique o ID numérico da conta (excluindo o prefixo act_).</p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-                    Target Page ID (Optional)
+                    ID da Página de Destino (Opcional)
                   </label>
                   <input
                     type="text"
                     value={config.page_id}
                     onChange={(e) => setConfig({ ...config, page_id: e.target.value })}
                     className="w-full bg-dark-bg border border-dark-border focus:border-brand-primary rounded-xl px-4 py-3 text-white text-sm outline-none transition-colors font-mono"
-                    placeholder="e.g. 9876543210"
+                    placeholder="ex: 9876543210"
                   />
-                  <p className="text-[9px] text-dark-muted mt-1">Default Facebook Page used for feed ads.</p>
+                  <p className="text-[9px] text-dark-muted mt-1">Página padrão do Facebook usada para os anúncios de feed.</p>
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-                  Meta Pixel ID (Optional)
+                  ID do Pixel do Meta (Opcional)
                 </label>
                 <input
                   type="text"
                   value={config.pixel_id}
                   onChange={(e) => setConfig({ ...config, pixel_id: e.target.value })}
                   className="w-full bg-dark-bg border border-dark-border focus:border-brand-primary rounded-xl px-4 py-3 text-white text-sm outline-none transition-colors font-mono"
-                  placeholder="e.g. 5432109876"
+                  placeholder="ex: 5432109876"
                 />
-                <p className="text-[10px] text-dark-muted mt-1.5">Facebook Pixel or Dataset ID used to track conversion events.</p>
+                <p className="text-[10px] text-dark-muted mt-1.5">ID do Facebook Pixel ou Dataset usado para rastrear eventos de conversão.</p>
               </div>
 
               <button
@@ -289,7 +285,7 @@ export default function MetaAds() {
                 className="w-full bg-brand-primary hover:bg-brand-primary/95 text-white font-semibold rounded-xl py-3 text-sm transition-colors flex items-center justify-center gap-2 shadow-lg shadow-brand-primary/10 mt-2"
               >
                 {savingConfig ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />}
-                <span>Configure Meta Connection</span>
+                <span>Configurar Conexão do Meta</span>
               </button>
             </form>
           </div>
@@ -300,11 +296,11 @@ export default function MetaAds() {
               <div className="flex items-center justify-between pb-4 border-b border-dark-border/40 mb-6">
                 <div className="flex items-center gap-2">
                   <Sparkles className="text-brand-accent" size={18} />
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-white">Manual Campaign Deployer</h3>
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-white">Publicador Manual de Campanhas</h3>
                 </div>
                 {isConfigured && (
                   <span className="text-[10px] bg-brand-accent/15 border border-brand-accent/30 text-brand-accent px-2 py-0.5 rounded-full font-bold uppercase">
-                    Ready
+                    Pronto
                   </span>
                 )}
               </div>
@@ -312,16 +308,16 @@ export default function MetaAds() {
               {!isConfigured ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-dark-bg/40 border border-dark-border/40 rounded-xl min-h-[250px]">
                   <AlertTriangle className="text-brand-secondary mb-3" size={32} />
-                  <h4 className="text-white font-bold text-sm mb-1.5">Meta Integration Required</h4>
+                  <h4 className="text-white font-bold text-sm mb-1.5">Integração Meta Obrigatória</h4>
                   <p className="text-xs text-dark-muted max-w-xs">
-                    Please configure and save your Meta API Access Token and Ad Account ID in the left settings pane to unlock deployment capabilities.
+                    Por favor, configure e salve seu Token de Acesso da API do Meta e o ID da Conta de Anúncios no painel de configurações à esquerda para desbloquear a publicação.
                   </p>
                 </div>
               ) : (
                 <form onSubmit={handleDeployCampaign} className="space-y-4">
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-                      Campaign Name
+                      Nome da Campanha
                     </label>
                     <input
                       type="text"
@@ -329,30 +325,30 @@ export default function MetaAds() {
                       value={campaign.campaign_name}
                       onChange={(e) => setCampaign({ ...campaign, campaign_name: e.target.value })}
                       className="w-full bg-dark-bg border border-dark-border focus:border-brand-accent rounded-xl px-4 py-3 text-white text-sm outline-none transition-colors"
-                      placeholder="e.g. Black Friday Traffic Burst"
+                      placeholder="ex: Explosão de Vendas Black Friday"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-                        Campaign Objective
+                        Objetivo da Campanha
                       </label>
                       <select
                         value={campaign.objective}
                         onChange={(e) => setCampaign({ ...campaign, objective: e.target.value })}
                         className="w-full bg-dark-bg border border-dark-border focus:border-brand-accent rounded-xl px-3 py-3 text-white text-sm outline-none"
                       >
-                        <option value="CONVERSIONS">CONVERSIONS (Sales)</option>
-                        <option value="LEAD_GENERATION">LEAD GENERATION</option>
-                        <option value="TRAFFIC">TRAFFIC (Clicks)</option>
-                        <option value="REACH">REACH (Impressions)</option>
+                        <option value="CONVERSIONS">CONVERSIONS (Vendas)</option>
+                        <option value="LEAD_GENERATION">GERAÇÃO DE LEADS</option>
+                        <option value="TRAFFIC">TRÁFEGO (Cliques)</option>
+                        <option value="REACH">ALCANCE (Impressões)</option>
                       </select>
                     </div>
 
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-                        Daily Budget (USD)
+                        Orçamento Diário (USD)
                       </label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-dark-muted">
@@ -376,17 +372,17 @@ export default function MetaAds() {
                     className="w-full bg-brand-accent hover:bg-brand-accent/95 text-dark-bg font-bold rounded-xl py-3 text-sm transition-colors flex items-center justify-center gap-2 shadow-lg shadow-brand-accent/15 mt-4"
                   >
                     {deployingCampaign ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                    <span>Deploy Simulated Campaign</span>
+                    <span>Publicar Campanha Simulada</span>
                   </button>
                 </form>
               )}
             </div>
 
             <div className="p-4 bg-dark-bg/60 border border-dark-border/40 rounded-xl text-[10px] text-dark-muted space-y-1.5 leading-relaxed mt-6">
-              <div className="font-bold text-white uppercase text-[9px] tracking-wider mb-1">Simulated Mode Guidelines:</div>
-              <p>• Clicking deploy simulates standard Facebook Graph Ads endpoints posting.</p>
-              <p>• Outputs a simulated unique Campaign ID representing active delivery.</p>
-              <p>• Saves a tracking payload JSON in the server's company workspace filesystem.</p>
+              <div className="font-bold text-white uppercase text-[9px] tracking-wider mb-1">Orientações do Modo Simulado:</div>
+              <p>• Clicar em publicar simula o envio padrão para os endpoints de anúncios do Facebook Graph.</p>
+              <p>• Gera um ID de Campanha simulado e único representando a veiculação ativa.</p>
+              <p>• Salva um JSON com as informações no workspace da empresa no servidor.</p>
             </div>
           </div>
 
@@ -397,14 +393,14 @@ export default function MetaAds() {
           <div className="flex justify-between items-center pb-4 border-b border-dark-border/40 mb-6">
             <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
               <Layers className="text-brand-secondary" size={16} />
-              <span>Active Campaigns Dashboard</span>
+              <span>Painel de Campanhas Ativas</span>
             </h3>
             <button
               onClick={() => setActiveTab("console")}
               className="text-xs text-brand-primary hover:underline font-semibold flex items-center gap-1"
             >
               <Plus size={14} />
-              <span>Create New</span>
+              <span>Criar Nova</span>
             </button>
           </div>
 
@@ -414,9 +410,9 @@ export default function MetaAds() {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-dark-bg/40 rounded-2xl p-4 flex items-center justify-between border border-dark-border/40">
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-dark-muted tracking-wider">Total Active Budget</p>
+                    <p className="text-[10px] uppercase font-bold text-dark-muted tracking-wider">Orçamento Ativo Total</p>
                     <h4 className="text-xl font-bold text-white mt-1">
-                      ${campaigns.reduce((acc, c) => acc + (c.daily_budget_usd || 0), 0).toFixed(2)}/day
+                      ${campaigns.reduce((acc, c) => acc + (c.daily_budget_usd || 0), 0).toFixed(2)}/dia
                     </h4>
                   </div>
                   <div className="p-3 bg-brand-primary/10 text-brand-primary rounded-xl">
@@ -426,7 +422,7 @@ export default function MetaAds() {
                 
                 <div className="bg-dark-bg/40 rounded-2xl p-4 flex items-center justify-between border border-dark-border/40">
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-dark-muted tracking-wider">Total Spend (Real)</p>
+                    <p className="text-[10px] uppercase font-bold text-dark-muted tracking-wider">Gasto Total (Real)</p>
                     <h4 className="text-xl font-bold text-brand-secondary mt-1">
                       ${campaigns.reduce((acc, c) => acc + (c.total_spent || 0), 0).toFixed(2)}
                     </h4>
@@ -438,7 +434,7 @@ export default function MetaAds() {
 
                 <div className="bg-dark-bg/40 rounded-2xl p-4 flex items-center justify-between border border-dark-border/40">
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-dark-muted tracking-wider">Average CTR</p>
+                    <p className="text-[10px] uppercase font-bold text-dark-muted tracking-wider">CTR Médio</p>
                     <h4 className="text-xl font-bold text-white mt-1">
                       {(campaigns.reduce((acc, c) => acc + (c.ctr || 0), 0) / campaigns.length).toFixed(2)}%
                     </h4>
@@ -450,7 +446,7 @@ export default function MetaAds() {
 
                 <div className="bg-dark-bg/40 rounded-2xl p-4 flex items-center justify-between border border-dark-border/40">
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-dark-muted tracking-wider">Total Conversions</p>
+                    <p className="text-[10px] uppercase font-bold text-dark-muted tracking-wider">Conversões Totais</p>
                     <h4 className="text-xl font-bold text-white mt-1">
                       {campaigns.reduce((acc, c) => acc + (c.conversions || 0), 0)}
                     </h4>
@@ -487,45 +483,45 @@ export default function MetaAds() {
                             ? "bg-brand-primary/10 border-brand-primary/30 text-brand-primary"
                             : "bg-brand-accent/15 border-brand-accent/30 text-brand-accent"
                         }`}>
-                          <span>{isAgent ? "🤖 Agent" : "👤 Manual"}</span>
+                          <span>{isAgent ? "🤖 Agente" : "👤 Manual"}</span>
                         </span>
                       </div>
 
                       <div className="grid grid-cols-3 gap-2.5 bg-dark-bg/40 p-3 rounded-xl border border-dark-border/30 text-xs">
                         <div>
-                          <div className="text-[10px] text-dark-muted font-semibold uppercase tracking-wider mb-0.5">Budget</div>
+                          <div className="text-[10px] text-dark-muted font-semibold uppercase tracking-wider mb-0.5">Orçamento</div>
                           <div className="font-bold text-white flex items-center">
                             <DollarSign size={13} className="shrink-0 text-brand-primary" />
-                            <span>{c.daily_budget_usd}/day</span>
+                            <span>{c.daily_budget_usd}/dia</span>
                           </div>
                         </div>
                         <div>
-                          <div className="text-[10px] text-dark-muted font-semibold uppercase tracking-wider mb-0.5">Total Spent</div>
+                          <div className="text-[10px] text-dark-muted font-semibold uppercase tracking-wider mb-0.5">Gasto Total</div>
                           <div className="font-bold text-brand-secondary flex items-center">
                             <DollarSign size={13} className="shrink-0" />
                             <span>{c.total_spent?.toFixed(2) || "0.00"}</span>
                           </div>
                         </div>
                         <div>
-                          <div className="text-[10px] text-dark-muted font-semibold uppercase tracking-wider mb-0.5">Health</div>
+                          <div className="text-[10px] text-dark-muted font-semibold uppercase tracking-wider mb-0.5">Saúde</div>
                           <span className={`inline-block text-[9px] uppercase tracking-wide px-2 py-0.5 rounded font-bold ${
                             c.health === "Excellent" ? "bg-brand-secondary/15 text-brand-secondary border border-brand-secondary/30" :
                             c.health === "Stable" ? "bg-brand-accent/15 text-brand-accent border border-brand-accent/30" :
                             c.health === "Underperforming" ? "bg-brand-danger/10 text-brand-danger border border-brand-danger/30" :
                             "bg-dark-border text-dark-muted"
                           }`}>
-                            {c.health || "Active"}
+                            {c.health || "Ativa"}
                           </span>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-4 gap-2 text-center text-[10px] bg-dark-bg/20 p-2.5 rounded-xl border border-dark-border/20">
                         <div>
-                          <div className="text-dark-muted mb-0.5">Impressions</div>
+                          <div className="text-dark-muted mb-0.5">Impressões</div>
                           <div className="font-bold text-white">{c.impressions?.toLocaleString() || 0}</div>
                         </div>
                         <div>
-                          <div className="text-dark-muted mb-0.5">Clicks</div>
+                          <div className="text-dark-muted mb-0.5">Cliques</div>
                           <div className="font-bold text-white">{c.clicks?.toLocaleString() || 0}</div>
                         </div>
                         <div>
@@ -547,17 +543,17 @@ export default function MetaAds() {
                           </span>
                         </div>
                         <div className="flex justify-between items-center font-mono">
-                          <span>Conversions (Leads):</span>
+                          <span>Conversões (Leads):</span>
                           <span className="text-white font-bold">{c.conversions || 0}</span>
                         </div>
                         <div className="flex justify-between items-center font-mono">
-                          <span>FB Campaign ID:</span>
+                          <span>ID da Campanha FB:</span>
                           <span className="text-white bg-dark-bg px-2 py-0.5 rounded border border-dark-border/60">{c.facebook_campaign_id}</span>
                         </div>
                         <div className="flex justify-between items-center font-mono">
                           <span className="flex items-center gap-1">
                             <Calendar size={11} />
-                            <span>Deployed At:</span>
+                            <span>Publicada em:</span>
                           </span>
                           <span className="text-white">
                             {new Date(c.deployed_at).toLocaleString()}
@@ -572,7 +568,7 @@ export default function MetaAds() {
           ) : (
             <div className="h-48 border border-dashed border-dark-border/60 rounded-2xl flex flex-col items-center justify-center text-xs text-dark-muted gap-2 italic">
               <Megaphone size={24} className="text-dark-muted" />
-              <span>No active Meta campaigns found. Ensure your Meta integration settings are configured.</span>
+              <span>Nenhuma campanha do Meta Ads ativa encontrada. Certifique-se de configurar a integração.</span>
             </div>
           )}
         </div>
@@ -587,34 +583,34 @@ export default function MetaAds() {
                 <CheckCircle2 size={24} />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-white">Campaign Simulated Successfully!</h3>
-                <p className="text-xs text-brand-secondary font-semibold">Simulated Meta Graph API Response</p>
+                <h3 className="text-xl font-bold text-white">Campanha Simulada com Sucesso!</h3>
+                <p className="text-xs text-brand-secondary font-semibold">Resposta Simulada da API Meta Graph</p>
               </div>
             </div>
 
             <div className="space-y-4 bg-dark-bg/60 border border-dark-border/40 rounded-2xl p-5 text-xs text-dark-muted font-medium">
               <div className="flex justify-between py-1.5 border-b border-dark-border/30">
-                <span>Campaign Name:</span>
+                <span>Nome da Campanha:</span>
                 <span className="text-white font-bold">{successDetails.campaign_name}</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-dark-border/30">
-                <span>Objective:</span>
+                <span>Objetivo:</span>
                 <span className="text-white font-mono bg-brand-secondary/10 text-brand-secondary px-2 py-0.5 rounded font-bold uppercase">{successDetails.objective}</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-dark-border/30">
-                <span>Daily Ad Budget:</span>
+                <span>Orçamento Diário:</span>
                 <span className="text-white font-bold">${successDetails.daily_budget_usd} USD</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-dark-border/30">
-                <span>Facebook Campaign ID:</span>
+                <span>ID da Campanha FB:</span>
                 <span className="text-brand-accent font-mono font-bold">{successDetails.facebook_campaign_id}</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-dark-border/30">
-                <span>Ad Account ID:</span>
+                <span>ID da Conta de Anúncios:</span>
                 <span className="text-white font-mono">act_{successDetails.ad_account_id}</span>
               </div>
               <div className="flex justify-between py-1.5">
-                <span>Trace Workspace Path:</span>
+                <span>Caminho de Rastreamento:</span>
                 <span className="text-white truncate font-mono max-w-[200px]" title={`workspace/company_X/manual_meta_campaign_...`}>
                   {successDetails.facebook_campaign_id.split("/")[1] ? `manual_meta_campaign_${successDetails.facebook_campaign_id.split("/")[1].split("_")[1]}.json` : "campaign.json"}
                 </span>
@@ -625,7 +621,7 @@ export default function MetaAds() {
               onClick={() => setSuccessDetails(null)}
               className="w-full bg-brand-secondary hover:bg-brand-secondary/90 text-white font-bold rounded-2xl py-3 text-sm transition-colors mt-6 shadow-lg shadow-brand-secondary/10"
             >
-              Acknowledge Deployment
+              Confirmar Publicação
             </button>
           </div>
         </div>

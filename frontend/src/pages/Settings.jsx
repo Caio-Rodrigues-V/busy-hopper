@@ -65,10 +65,10 @@ export default function Settings() {
         markup_pct: parseFloat(markup)
       });
       setCompany(res.data);
-      alert("Company settings updated successfully!");
+      alert("Configurações da empresa atualizadas com sucesso!");
     } catch (err) {
       console.error(err);
-      alert("Failed to update company parameters.");
+      alert("Falha ao atualizar parâmetros da empresa.");
     } finally {
       setUpdatingCompany(false);
     }
@@ -78,7 +78,7 @@ export default function Settings() {
     let finalKey = apiKey;
     if (provider === "aws_bedrock") {
       if (!awsAccessKeyId || !awsSecretAccessKey) {
-        alert("Please fill in both AWS Access Key ID and Secret Access Key.");
+        alert("Por favor, preencha o AWS Access Key ID e o AWS Secret Access Key.");
         return;
       }
       finalKey = JSON.stringify({
@@ -88,7 +88,7 @@ export default function Settings() {
       });
     } else {
       if (!apiKey) {
-        alert("Please fill in the API Key.");
+        alert("Por favor, preencha a chave de API (API Key).");
         return;
       }
     }
@@ -97,13 +97,13 @@ export default function Settings() {
     try {
       const res = await credentialAPI.validate(provider, finalKey);
       if (res.data.valid) {
-        alert("Validation SUCCESS: API credentials are valid and connection was established!");
+        alert("Validação com SUCESSO: As credenciais da API são válidas e a conexão foi estabelecida!");
       } else {
-        alert(`Validation FAILED: ${res.data.error}`);
+        alert(`Falha na validação: ${res.data.error}`);
       }
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.detail || "Validation failed due to connection error.");
+      alert(err.response?.data?.detail || "Falha na validação devido a erro de conexão.");
     } finally {
       setTestingKey(false);
     }
@@ -115,7 +115,7 @@ export default function Settings() {
     let finalKey = apiKey;
     if (provider === "aws_bedrock") {
       if (!awsAccessKeyId || !awsSecretAccessKey) {
-        alert("AWS credentials are required for Bedrock.");
+        alert("Credenciais AWS são obrigatórias para o Bedrock.");
         return;
       }
       finalKey = JSON.stringify({
@@ -137,23 +137,23 @@ export default function Settings() {
       setApiKey("");
       setAwsAccessKeyId("");
       setAwsSecretAccessKey("");
-      alert("LLM Provider credentials configured successfully!");
+      alert("Credenciais do provedor de LLM configuradas com sucesso!");
     } catch (err) {
       console.error(err);
-      alert("Failed to save credentials.");
+      alert("Falha ao salvar as credenciais.");
     } finally {
       setSubmittingKey(false);
     }
   };
 
   const handleDeleteCredential = async (id) => {
-    if (!confirm("Are you sure you want to remove these credentials?")) return;
+    if (!confirm("Tem certeza de que deseja remover estas credenciais?")) return;
     try {
       await credentialAPI.delete(id);
       setCredentials(credentials.filter(c => c.id !== id));
     } catch (err) {
       console.error(err);
-      alert("Failed to delete credentials.");
+      alert("Falha ao excluir as credenciais.");
     }
   };
 
@@ -161,7 +161,7 @@ export default function Settings() {
     return (
       <div className="h-96 flex flex-col items-center justify-center gap-3 text-dark-muted">
         <Loader2 size={32} className="animate-spin text-brand-primary" />
-        <span>Loading company settings...</span>
+        <span>Carregando configurações da empresa...</span>
       </div>
     );
   }
@@ -170,9 +170,9 @@ export default function Settings() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Enterprise Settings</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Configurações da Empresa</h1>
         <p className="text-dark-muted text-sm">
-          Adjust monthly spending budget, set pricing markup margins, configure encrypted LLM credentials, and inspect operations audit trail.
+          Ajuste o orçamento mensal de gastos, defina margens de markup, configure credenciais criptografadas de LLM e inspecione a trilha de auditoria.
         </p>
       </div>
 
@@ -186,13 +186,13 @@ export default function Settings() {
           <div className="glass-panel rounded-2xl p-6 space-y-6">
             <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
               <TrendingUp className="text-brand-primary" size={16} />
-              <span>Budget & Markup Pricing Parameters</span>
+              <span>Parâmetros de Orçamento e Margem de Preço (Markup)</span>
             </h3>
 
             <form onSubmit={handleUpdateCompanySettings} className="space-y-5">
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-                  Company Monthly Budget Limit (USD)
+                  Limite de Orçamento Mensal da Empresa (USD)
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-dark-muted">
@@ -207,12 +207,12 @@ export default function Settings() {
                     className="w-full bg-dark-bg border border-dark-border focus:border-brand-primary rounded-xl pl-9 pr-4 py-3 text-white text-sm outline-none transition-colors"
                   />
                 </div>
-                <p className="text-[10px] text-dark-muted mt-1.5">If the company reaches this cost cap, all active runs automatically halt.</p>
+                <p className="text-[10px] text-dark-muted mt-1.5">Se a empresa atingir esse limite de custo, todas as execuções ativas serão interrompidas automaticamente.</p>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-                  Markup Margin Percent (%)
+                  Porcentagem de Margem de Markup (%)
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-dark-muted">
@@ -227,7 +227,7 @@ export default function Settings() {
                     className="w-full bg-dark-bg border border-dark-border focus:border-brand-primary rounded-xl pl-9 pr-4 py-3 text-white text-sm outline-none transition-colors"
                   />
                 </div>
-                <p className="text-[10px] text-dark-muted mt-1.5">Determines client billing prices ($ real cost * markup percentage multiplier).</p>
+                <p className="text-[10px] text-dark-muted mt-1.5">Determina os preços de faturamento dos clientes (custo real + porcentagem de markup).</p>
               </div>
 
               <button
@@ -236,7 +236,7 @@ export default function Settings() {
                 className="w-full bg-brand-primary hover:bg-brand-primary/95 text-white font-semibold rounded-xl py-3 text-sm transition-colors flex items-center justify-center gap-2"
               >
                 {updatingCompany && <Loader2 size={16} className="animate-spin" />}
-                <span>Save Parameters</span>
+                <span>Salvar Parâmetros</span>
               </button>
             </form>
           </div>
@@ -245,7 +245,7 @@ export default function Settings() {
           <div className="glass-panel rounded-2xl p-6 space-y-6">
             <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
               <KeyRound className="text-brand-accent" size={16} />
-              <span>Provider API Credentials</span>
+              <span>Credenciais de API dos Provedores</span>
             </h3>
 
             {/* Existing credentials */}
@@ -258,8 +258,8 @@ export default function Settings() {
                         <KeyRound size={16} />
                       </div>
                       <div>
-                        <div className="font-bold text-white text-sm capitalize">{c.provider} API Key</div>
-                        <div className="text-[10px] text-dark-muted font-mono">Suffix: ************{c.last4}</div>
+                        <div className="font-bold text-white text-sm capitalize">Chave de API {c.provider}</div>
+                        <div className="text-[10px] text-dark-muted font-mono">Sufixo: ************{c.last4}</div>
                       </div>
                     </div>
                     <button
@@ -274,7 +274,7 @@ export default function Settings() {
             ) : (
               <div className="p-4 bg-brand-danger/10 border border-brand-danger/20 rounded-xl text-brand-danger text-xs flex items-center gap-2.5">
                 <AlertTriangle size={18} />
-                <span>No API keys saved. Fill form below to authorize Claude.</span>
+                <span>Nenhuma chave de API salva. Preencha o formulário abaixo para autorizar.</span>
               </div>
             )}
 
@@ -283,7 +283,7 @@ export default function Settings() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-                    LLM Provider
+                    Provedor de LLM
                   </label>
                   <select
                     value={provider}
@@ -297,7 +297,7 @@ export default function Settings() {
                     <option value="openrouter">OpenRouter</option>
                     <option value="cohere">Cohere</option>
                     <option value="aws_bedrock">AWS Bedrock</option>
-                    <option value="custom">Custom API Gateway</option>
+                    <option value="custom">Gateway de API Personalizado</option>
                   </select>
                 </div>
 
@@ -333,7 +333,7 @@ export default function Settings() {
                     </div>
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-                        AWS Region
+                        Região AWS
                       </label>
                       <select
                         value={awsRegion}
@@ -350,7 +350,7 @@ export default function Settings() {
                 ) : (
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-                      API Key (Fernet Encrypted)
+                      Chave de API (Criptografada via Fernet)
                     </label>
                     <input
                       type="password"
@@ -372,7 +372,7 @@ export default function Settings() {
                   className="w-full bg-dark-bg border border-dark-border hover:bg-dark-border/40 text-dark-muted hover:text-white font-semibold rounded-xl py-3 text-sm transition-colors flex items-center justify-center gap-2"
                 >
                   {testingKey && <Loader2 size={16} className="animate-spin" />}
-                  <span>Test Connection</span>
+                  <span>Testar Conexão</span>
                 </button>
                 <button
                   type="submit"
@@ -380,7 +380,7 @@ export default function Settings() {
                   className="w-full bg-brand-accent hover:bg-brand-accent/90 text-white font-semibold rounded-xl py-3 text-sm transition-colors flex items-center justify-center gap-2"
                 >
                   {submittingKey && <Loader2 size={16} className="animate-spin" />}
-                  <span>Save Credentials</span>
+                  <span>Salvar Credenciais</span>
                 </button>
               </div>
             </form>
@@ -392,7 +392,7 @@ export default function Settings() {
         <div className="glass-panel rounded-2xl p-6 flex flex-col min-h-[500px]">
           <h3 className="text-sm font-bold uppercase tracking-wider text-white mb-6 flex items-center gap-2 shrink-0">
             <FileText className="text-brand-secondary" size={16} />
-            <span>Immutable Governance Audit Log</span>
+            <span>Log de Auditoria Imutável de Governança</span>
           </h3>
 
           <div className="flex-1 overflow-y-auto space-y-3.5 max-h-[600px] pr-1">
@@ -409,7 +409,7 @@ export default function Settings() {
                   </div>
                   
                   <div className="text-dark-text leading-relaxed font-medium">
-                    Actor: <span className="font-mono text-brand-accent">{log.actor}</span>
+                    Autor: <span className="font-mono text-brand-accent">{log.actor}</span>
                   </div>
                   
                   {log.payload && (
@@ -421,7 +421,7 @@ export default function Settings() {
               ))
             ) : (
               <div className="h-full flex items-center justify-center text-xs text-dark-muted italic">
-                No events recorded in company audit logs.
+                Nenhum evento registrado nos logs de auditoria da empresa.
               </div>
             )}
           </div>

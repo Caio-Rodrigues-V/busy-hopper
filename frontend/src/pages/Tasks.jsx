@@ -66,7 +66,7 @@ export default function Tasks() {
       setAgents(agentsRes.data);
     } catch (err) {
       console.error(err);
-      setError("Failed to fetch tasks/agents data.");
+      setError("Falha ao carregar dados de tarefas/agentes.");
     } finally {
       setLoading(false);
     }
@@ -170,17 +170,15 @@ export default function Tasks() {
       setAssigneeId("");
     } catch (err) {
       console.error(err);
-      alert("Failed to queue task.");
+      alert("Falha ao enfileirar a tarefa.");
     } finally {
       setSubmitting(false);
     }
   };
 
-
-
   const getAgentName = (agentId) => {
     const agent = agents.find(a => a.id === agentId);
-    return agent ? agent.name : "Unassigned";
+    return agent ? agent.name : "Não Atribuído";
   };
 
   const getAgentTitle = (agentId) => {
@@ -192,18 +190,18 @@ export default function Tasks() {
     return (
       <div className="h-96 flex flex-col items-center justify-center gap-3 text-dark-muted">
         <Loader2 size={32} className="animate-spin text-brand-primary" />
-        <span>Loading ticket register...</span>
+        <span>Carregando registro de tickets...</span>
       </div>
     );
   }
 
   // Columns definition
   const columns = [
-    { title: "Backlog / Todo", status: "todo", color: "border-t-brand-primary", bg: "bg-brand-primary/5" },
-    { title: "Active Execution", status: "in_progress", color: "border-t-brand-accent", bg: "bg-brand-accent/5" },
-    { title: "Success / Done", status: "done", color: "border-t-brand-secondary", bg: "bg-brand-secondary/5" },
-    { title: "Failed / Paused", status: "failed", color: "border-t-brand-danger", bg: "bg-brand-danger/5" },
-    { title: "Approval Gate", status: "paused", color: "border-t-brand-secondary", bg: "bg-brand-secondary/5" },
+    { title: "A Fazer (Backlog)", status: "todo", color: "border-t-brand-primary", bg: "bg-brand-primary/5" },
+    { title: "Em Execução", status: "in_progress", color: "border-t-brand-accent", bg: "bg-brand-accent/5" },
+    { title: "Concluído", status: "done", color: "border-t-brand-secondary", bg: "bg-brand-secondary/5" },
+    { title: "Falhou", status: "failed", color: "border-t-brand-danger", bg: "bg-brand-danger/5" },
+    { title: "Aguardando Aprovação", status: "paused", color: "border-t-brand-secondary", bg: "bg-brand-secondary/5" },
   ];
 
   return (
@@ -211,9 +209,9 @@ export default function Tasks() {
       {/* Top action header */}
       <div className="flex justify-between items-start shrink-0">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Corporate Task Board</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Fila de Tarefas</h1>
           <p className="text-dark-muted text-sm">
-            Kanban tracking of active tasks, assigned processors, subtask nesting, and live audit runs logs.
+            Acompanhamento Kanban de tarefas ativas, responsáveis designados, subordinação de subtarefas e logs de execução.
           </p>
         </div>
         <button
@@ -221,7 +219,7 @@ export default function Tasks() {
           className="bg-brand-primary hover:bg-brand-primary/95 text-white font-semibold rounded-xl px-5 py-3 text-sm transition-colors shadow-lg shadow-brand-primary/20 flex items-center gap-2"
         >
           <Plus size={16} />
-          <span>Queue Task</span>
+          <span>Criar Tarefa</span>
         </button>
       </div>
 
@@ -266,13 +264,13 @@ export default function Tasks() {
                           <User size={12} className="text-brand-primary" />
                           <span className="font-medium text-white">{getAgentName(task.assignee_agent_id)}</span>
                         </div>
-                        <span>Task #{task.id}</span>
+                        <span>Tarefa #{task.id}</span>
                       </div>
                     </div>
                   ))
                 ) : (
                   <div className="h-full flex items-center justify-center text-xs text-dark-muted italic border-2 border-dashed border-dark-border/20 rounded-xl py-20">
-                    No tickets in this state
+                    Sem tickets nesta coluna
                   </div>
                 )}
               </div>
@@ -287,14 +285,14 @@ export default function Tasks() {
           {/* Header */}
           <div className="p-6 border-b border-dark-border flex justify-between items-center bg-dark-card/50">
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-brand-primary">Task Trace Inspection</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-brand-primary">Inspeção de Execução da Tarefa</span>
               <h2 className="text-xl font-bold text-white">{selectedTask.title}</h2>
             </div>
             <button 
               onClick={() => setSelectedTask(null)}
               className="text-dark-muted hover:text-white border border-dark-border hover:bg-dark-border/40 px-3 py-1.5 rounded-xl text-xs transition-colors"
             >
-              Close inspector
+              Fechar Inspetor
             </button>
           </div>
 
@@ -306,14 +304,14 @@ export default function Tasks() {
               
               <div className="grid grid-cols-2 gap-4 border-t border-dark-border/40 pt-4 text-xs text-dark-muted">
                 <div>
-                  <span className="block mb-1">Assignee Agent</span>
+                  <span className="block mb-1">Agente Responsável</span>
                   <span className="font-bold text-white flex items-center gap-1.5">
                     <Cpu size={14} className="text-brand-primary" />
                     {getAgentName(selectedTask.assignee_agent_id)} ({getAgentTitle(selectedTask.assignee_agent_id)})
                   </span>
                 </div>
                 <div>
-                  <span className="block mb-1">Created At</span>
+                  <span className="block mb-1">Criado Em</span>
                   <span className="font-bold text-white flex items-center gap-1.5">
                     <Clock size={14} className="text-brand-primary" />
                     {new Date(selectedTask.created_at).toLocaleString()}
@@ -326,17 +324,17 @@ export default function Tasks() {
             <div>
               <h3 className="text-xs font-bold uppercase tracking-wider text-dark-muted mb-3 flex items-center gap-2">
                 <Database size={14} />
-                <span>Nesting & Goal Alignment (Subtasks)</span>
+                <span>Aninhamento & Alinhamento de Objetivos (Subtarefas)</span>
               </h3>
               <div className="glass-panel rounded-2xl p-4 space-y-2 text-sm">
                 <div className="flex items-center gap-2 text-brand-primary font-semibold">
                   <CheckCircle size={14} />
-                  <span>Goal alignment: {selectedTask.traces_to_goal ? "Verified" : "Bypassed"}</span>
+                  <span>Alinhamento de objetivo: {selectedTask.traces_to_goal ? "Verificado" : "Ignorado"}</span>
                 </div>
                 <div className="text-xs text-dark-muted">
                   {tasks.filter(t => t.parent_task_id === selectedTask.id).length > 0 ? (
                     <div className="space-y-2 mt-2">
-                      <span className="block font-semibold">Delegated subtasks:</span>
+                      <span className="block font-semibold">Subtarefas delegadas:</span>
                       {tasks.filter(t => t.parent_task_id === selectedTask.id).map(child => (
                         <div key={child.id} className="flex items-center justify-between p-2.5 bg-dark-bg border border-dark-border rounded-xl">
                           <span className="text-white font-medium">{child.title}</span>
@@ -345,7 +343,7 @@ export default function Tasks() {
                       ))}
                     </div>
                   ) : (
-                    <span>No subtasks delegated by this node.</span>
+                    <span>Nenhuma subtarefa delegada por este nó.</span>
                   )}
                 </div>
               </div>
@@ -355,7 +353,7 @@ export default function Tasks() {
             <div>
               <h3 className="text-xs font-bold uppercase tracking-wider text-dark-muted mb-3 flex items-center gap-2">
                 <Cpu size={14} />
-                <span>Execution runs history</span>
+                <span>Histórico de Execuções</span>
               </h3>
 
               {loadingRuns ? (
@@ -367,7 +365,7 @@ export default function Tasks() {
                   {runs.map((run, idx) => (
                     <div key={run.id} className="glass-panel rounded-2xl p-5 space-y-4 border border-dark-border">
                       <div className="flex items-center justify-between border-b border-dark-border/40 pb-3">
-                        <span className="font-bold text-white text-sm">Run #{run.id} (Attempt {runs.length - idx})</span>
+                        <span className="font-bold text-white text-sm">Execução #{run.id} (Tentativa {runs.length - idx})</span>
                         <div className="flex gap-2">
                           <span className="text-xs font-medium bg-dark-border px-2.5 py-1 rounded-lg text-white flex items-center gap-1">
                             <Coins size={12} className="text-brand-secondary" />
@@ -376,7 +374,7 @@ export default function Tasks() {
                           <span className={`text-xs font-bold uppercase px-2.5 py-1 rounded-lg ${
                             run.status === "success" ? "bg-brand-secondary/15 text-brand-secondary" : run.status === "failed" ? "bg-brand-danger/15 text-brand-danger" : "bg-brand-accent/15 text-brand-accent"
                           }`}>
-                            {run.status}
+                            {run.status === "success" ? "Sucesso" : run.status === "failed" ? "Falhou" : "Pausado"}
                           </span>
                         </div>
                       </div>
@@ -403,24 +401,24 @@ export default function Tasks() {
                             {/* Render step specifics */}
                             {step.kind === "llm_call" && (
                               <div className="bg-dark-bg/60 border border-dark-border/50 rounded-xl p-3 mt-1.5 text-white/80 font-mono text-[10px] whitespace-pre-wrap max-h-40 overflow-y-auto">
-                                <strong>Prompt Response:</strong><br />
+                                <strong>Resposta do Prompt:</strong><br />
                                 {step.output?.content?.map(c => c.text).join("\n") || JSON.stringify(step.output)}
                               </div>
                             )}
 
                             {step.kind === "tool_call" && (
                               <div className="bg-dark-bg/60 border border-dark-border/50 rounded-xl p-3 mt-1.5 space-y-1 text-white/80 font-mono text-[10px]">
-                                <div><strong>Tool used:</strong> <span className="text-brand-primary">{step.input?.tool_name}</span></div>
-                                <div><strong>Input:</strong> {JSON.stringify(step.input?.input)}</div>
-                                <div><strong>Output:</strong> {JSON.stringify(step.output?.result)}</div>
+                                <div><strong>Ferramenta usada:</strong> <span className="text-brand-primary">{step.input?.tool_name}</span></div>
+                                <div><strong>Entrada:</strong> {JSON.stringify(step.input?.input)}</div>
+                                <div><strong>Saída:</strong> {JSON.stringify(step.output?.result)}</div>
                               </div>
                             )}
 
                             {step.kind === "approval" && (
                               <div className="bg-dark-bg/60 border border-dark-border/50 rounded-xl p-3 mt-1.5 space-y-1 text-white/80 font-mono text-[10px]">
-                                <div className="text-brand-secondary font-bold">BOARD APPROVAL ATTACHED</div>
-                                <div><strong>Action Category:</strong> {step.input?.action}</div>
-                                <div><strong>Output Result:</strong> {JSON.stringify(step.output?.result)}</div>
+                                <div className="text-brand-secondary font-bold">APROVAÇÃO DA DIRETORIA ANEXADA</div>
+                                <div><strong>Categoria de Ação:</strong> {step.input?.action}</div>
+                                <div><strong>Resultado de Saída:</strong> {JSON.stringify(step.output?.result)}</div>
                               </div>
                             )}
                           </div>
@@ -431,7 +429,7 @@ export default function Tasks() {
                 </div>
               ) : (
                 <div className="text-center py-10 bg-dark-bg border border-dark-border/40 rounded-2xl text-dark-muted text-xs italic">
-                  No execution runs recorded for this ticket.
+                  Nenhuma execução registrada para este ticket.
                 </div>
               )}
             </div>
@@ -445,14 +443,14 @@ export default function Tasks() {
           <div className="w-full max-w-lg glass-panel rounded-2xl p-8 relative shadow-2xl">
             <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-3">
               <KanbanSquare className="text-brand-primary" />
-              <span>Queue Corporate Task</span>
+              <span>Criar Nova Tarefa</span>
             </h2>
-            <p className="text-dark-muted text-sm mb-6">Create a new task, assign it to a node agent, and track completion.</p>
+            <p className="text-dark-muted text-sm mb-6">Crie uma nova tarefa, atribua-a a um agente e acompanhe sua conclusão.</p>
 
             <form onSubmit={handleCreateTask} className="space-y-5">
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-                  Task Title
+                  Título da Tarefa
                 </label>
                 <input
                   type="text"
@@ -460,13 +458,13 @@ export default function Tasks() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full bg-dark-bg border border-dark-border focus:border-brand-primary rounded-xl px-4 py-3 text-white text-sm outline-none transition-colors"
-                  placeholder="e.g. Set up auth routes"
+                  placeholder="ex: Configurar rotas de autenticação"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-                  Task Description
+                  Descrição da Tarefa
                 </label>
                 <textarea
                   required
@@ -474,13 +472,13 @@ export default function Tasks() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="w-full bg-dark-bg border border-dark-border focus:border-brand-primary rounded-xl px-4 py-3 text-white text-sm outline-none transition-colors resize-none"
-                  placeholder="Describe details, specifications, and acceptance criteria..."
+                  placeholder="Descreva detalhes, especificações e critérios de aceitação..."
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-                  Assignee Agent
+                  Agente Responsável
                 </label>
                 <select
                   required
@@ -488,7 +486,7 @@ export default function Tasks() {
                   onChange={(e) => setAssigneeId(e.target.value)}
                   className="w-full bg-dark-bg border border-dark-border focus:border-brand-primary rounded-xl px-4 py-3 text-white text-sm outline-none"
                 >
-                  <option value="">Select processor agent...</option>
+                  <option value="">Selecione o agente responsável...</option>
                   {agents.map(a => (
                     <option key={a.id} value={a.id}>{a.name} ({a.title})</option>
                   ))}
@@ -501,7 +499,7 @@ export default function Tasks() {
                   onClick={() => setShowCreateModal(false)}
                   className="border border-dark-border hover:bg-dark-border/20 text-white font-semibold rounded-xl px-6 py-2.5 text-sm transition-colors"
                 >
-                  Cancel
+                  Cancelar
                 </button>
                 <button
                   type="submit"
@@ -509,7 +507,7 @@ export default function Tasks() {
                   className="bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold rounded-xl px-6 py-2.5 text-sm transition-colors shadow-lg shadow-brand-primary/20 flex items-center gap-2"
                 >
                   {submitting && <Loader2 size={16} className="animate-spin" />}
-                  <span>Queue Task</span>
+                  <span>Criar Tarefa</span>
                 </button>
               </div>
             </form>

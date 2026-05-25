@@ -9,7 +9,8 @@ import {
   Gauge,
   Loader2,
   Heart,
-  AlertTriangle
+  AlertTriangle,
+  HelpCircle
 } from "lucide-react";
 import { 
   LineChart, 
@@ -26,6 +27,18 @@ import {
   Pie,
   Cell
 } from "recharts";
+
+function InfoTooltip({ text }) {
+  return (
+    <div className="group relative inline-block ml-1.5 cursor-help align-middle">
+      <HelpCircle size={14} className="text-dark-muted hover:text-brand-primary transition-colors inline" />
+      <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 scale-95 opacity-0 group-hover:scale-100 group-hover:opacity-100 transition-all duration-200 origin-bottom bg-dark-card border border-brand-primary/40 text-xs text-dark-text p-2.5 rounded-xl shadow-2xl backdrop-blur-md z-50 font-normal normal-case tracking-normal text-left">
+        <div className="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-brand-primary/40" />
+        {text}
+      </div>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const [metrics, setMetrics] = useState(null);
@@ -44,7 +57,7 @@ export default function Dashboard() {
       setError("");
     } catch (err) {
       console.error(err);
-      setError("Failed to retrieve dashboard metrics.");
+      setError("Falha ao recuperar as métricas do painel.");
     } finally {
       setLoading(false);
     }
@@ -62,9 +75,9 @@ export default function Dashboard() {
     return (
       <div className="h-96 flex flex-col items-center justify-center gap-3 text-dark-muted p-6 border border-dashed border-dark-border rounded-2xl bg-dark-card/20">
         <Loader2 size={32} className="animate-spin text-brand-primary" />
-        <span className="text-center font-medium">Waiting for enterprise selection or onboarding...</span>
+        <span className="text-center font-medium">Aguardando a seleção ou criação da empresa...</span>
         <p className="text-xs text-dark-muted text-center max-w-sm">
-          Please select or establish a company in the sidebar to load the corporate analytics control plane.
+          Por favor, selecione ou crie uma empresa na barra lateral para carregar o painel de controle analítico.
         </p>
       </div>
     );
@@ -74,7 +87,7 @@ export default function Dashboard() {
     return (
       <div className="h-96 flex flex-col items-center justify-center gap-3 text-dark-muted">
         <Loader2 size={32} className="animate-spin text-brand-primary" />
-        <span>Aggregating ledger data...</span>
+        <span>Agregando dados contábeis...</span>
       </div>
     );
   }
@@ -83,39 +96,36 @@ export default function Dashboard() {
     return (
       <div className="p-6 bg-brand-danger/10 border border-brand-danger/20 rounded-2xl text-brand-danger flex items-center gap-3">
         <AlertTriangle />
-        <span>{error || "No metrics data available."}</span>
+        <span>{error || "Nenhum dado de métricas disponível."}</span>
       </div>
     );
   }
 
   const { kpis, cost_over_time, agent_metrics, top_tasks = [] } = metrics;
 
-  // Colors for donut chart (strictly Orange and Black/Dark Gray)
-
-
   // Helper for agent status badges
   const getStatusBadge = (status) => {
     switch (status) {
       case "active":
-        return <span className="bg-brand-primary/15 text-brand-primary border border-brand-primary/20 px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider">Active</span>;
+        return <span className="bg-brand-primary/15 text-brand-primary border border-brand-primary/20 px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider">Ativo</span>;
       case "paused":
-        return <span className="bg-brand-accent/15 text-brand-accent border border-brand-accent/20 px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider">Paused</span>;
+        return <span className="bg-brand-accent/15 text-brand-accent border border-brand-accent/20 px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider">Pausado</span>;
       case "exhausted":
-        return <span className="bg-brand-danger/15 text-brand-danger border border-brand-danger/20 px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider">Exhausted</span>;
+        return <span className="bg-brand-danger/15 text-brand-danger border border-brand-danger/20 px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider">Esgotado</span>;
       default:
         return <span className="bg-dark-muted/20 text-dark-muted px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider">{status}</span>;
     }
   };
 
-  // Helper for Health classifications (strictly Orange/Black spectrum)
+  // Helper for Health classifications
   const getHealthBadge = (health) => {
     switch (health) {
       case "green":
-        return <span className="flex items-center gap-1.5 text-brand-primary font-semibold text-sm"><Heart size={14} fill="#FF5500" stroke="#FF5500" /> Healthy</span>;
+        return <span className="flex items-center gap-1.5 text-brand-primary font-semibold text-sm"><Heart size={14} fill="#FF5500" stroke="#FF5500" /> Saudável</span>;
       case "yellow":
-        return <span className="flex items-center gap-1.5 text-brand-accent font-semibold text-sm"><AlertTriangle size={14} fill="#FF9F40" stroke="#FF9F40" /> Warning</span>;
+        return <span className="flex items-center gap-1.5 text-brand-accent font-semibold text-sm"><AlertTriangle size={14} fill="#FF9F40" stroke="#FF9F40" /> Alerta</span>;
       case "red":
-        return <span className="flex items-center gap-1.5 text-brand-danger font-semibold text-sm"><AlertTriangle size={14} fill="#FF3300" stroke="#FF3300" /> Critical</span>;
+        return <span className="flex items-center gap-1.5 text-brand-danger font-semibold text-sm"><AlertTriangle size={14} fill="#FF3300" stroke="#FF3300" /> Crítico</span>;
       default:
         return <span>{health}</span>;
     }
@@ -125,30 +135,36 @@ export default function Dashboard() {
     <div className="space-y-8">
       {/* Overview stats header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Corporate Health & Analytics</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-2">Saúde Corporativa & Estatísticas</h1>
         <p className="text-dark-muted text-sm max-w-3xl">
-          Real-time metrics auditing active agent tasks, cumulative execution expenditures, markup invoicing comparisons, and API limits.
+          Auditoria em tempo real de tarefas de agentes ativos, despesas de execução acumuladas, faturamento com markup e limites de API.
         </p>
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
         {/* Real Cost Card */}
         <div className="glass-card rounded-2xl p-6 relative overflow-hidden">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Gastos da API (Custo Real)</span>
+            <span className="text-xs font-semibold text-dark-muted uppercase tracking-wider flex items-center">
+              Gastos API (Real)
+              <InfoTooltip text="Custo real consumido das APIs de LLM sem markup." />
+            </span>
             <div className="p-2 bg-brand-primary/10 rounded-lg text-brand-primary">
               <DollarSign size={18} />
             </div>
           </div>
           <div className="text-2xl font-bold text-white">${kpis.monthly_cost.toFixed(2)}</div>
-          <p className="text-[10px] text-dark-muted mt-2">Custo real consumido da API Anthropic</p>
+          <p className="text-[10px] text-dark-muted mt-2">Custo real de consumo das chaves de API</p>
         </div>
 
         {/* Markup Cost Card */}
         <div className="glass-card rounded-2xl p-6 relative overflow-hidden">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Faturamento (Com Markup)</span>
+            <span className="text-xs font-semibold text-dark-muted uppercase tracking-wider flex items-center">
+              Faturamento
+              <InfoTooltip text="Valor faturado aos clientes com markup aplicado." />
+            </span>
             <div className="p-2 bg-brand-accent/10 rounded-lg text-brand-accent">
               <TrendingUp size={18} />
             </div>
@@ -160,7 +176,10 @@ export default function Dashboard() {
         {/* Budget Card */}
         <div className="glass-card rounded-2xl p-6 relative overflow-hidden">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Budget Spent</span>
+            <span className="text-xs font-semibold text-dark-muted uppercase tracking-wider flex items-center">
+              Orçamento
+              <InfoTooltip text="Orçamento máximo mensal da empresa antes do bloqueio automático." />
+            </span>
             <div className="p-2 bg-brand-primary/10 rounded-lg text-brand-primary">
               <Percent size={18} />
             </div>
@@ -172,31 +191,37 @@ export default function Dashboard() {
               style={{ width: `${Math.min(kpis.budget_pct, 100)}%` }}
             />
           </div>
-          <p className="text-[10px] text-dark-muted mt-2">Limit: ${metrics.monthly_budget} / month</p>
+          <p className="text-[10px] text-dark-muted mt-2">Limite: ${metrics.monthly_budget} / mês</p>
         </div>
 
         {/* Runs Today Card */}
         <div className="glass-card rounded-2xl p-6 relative overflow-hidden">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Runs Today</span>
+            <span className="text-xs font-semibold text-dark-muted uppercase tracking-wider flex items-center">
+              Execuções Hoje
+              <InfoTooltip text="Quantidade de loops de execução iniciados nas últimas 24 horas." />
+            </span>
             <div className="p-2 bg-brand-accent/10 rounded-lg text-brand-accent">
               <Activity size={18} />
             </div>
           </div>
           <div className="text-2xl font-bold text-white">{kpis.runs_today}</div>
-          <p className="text-[10px] text-dark-muted mt-2">Active loops in past 24 hours</p>
+          <p className="text-[10px] text-dark-muted mt-2">Loops ativos nas últimas 24 horas</p>
         </div>
 
         {/* Success Rate Card */}
         <div className="glass-card rounded-2xl p-6 relative overflow-hidden">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Success Rate</span>
+            <span className="text-xs font-semibold text-dark-muted uppercase tracking-wider flex items-center">
+              Sucesso
+              <InfoTooltip text="Porcentagem de execuções finalizadas com sucesso versus falhas." />
+            </span>
             <div className="p-2 bg-brand-secondary/10 rounded-lg text-brand-secondary">
               <CheckCircle size={18} />
             </div>
           </div>
           <div className="text-2xl font-bold text-white">{kpis.success_rate}%</div>
-          <p className="text-[10px] text-dark-muted mt-2">Percentage of successful task runs</p>
+          <p className="text-[10px] text-dark-muted mt-2">Porcentagem de tarefas executadas com êxito</p>
         </div>
       </div>
 
@@ -204,9 +229,12 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Cost Over Time (Line Chart) */}
         <div className="glass-panel rounded-2xl p-6">
-          <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-6">Evolução dos Gastos da API (USD)</h3>
-          <div className="h-80 w-full">
-            <ResponsiveContainer width="100%" height={320}>
+          <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-6 flex items-center">
+            Evolução de Custos (USD)
+            <InfoTooltip text="Histórico diário de custos de execução das APIs de LLM comparando custo real e faturamento com markup." />
+          </h3>
+          <div className="h-80 w-full overflow-hidden">
+            <ResponsiveContainer width="100%" height="100%">
               <LineChart data={cost_over_time}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1D1D24" />
                 <XAxis dataKey="date" stroke="#9CA3AF" tick={{ fontSize: 10 }} />
@@ -214,7 +242,7 @@ export default function Dashboard() {
                 <Tooltip contentStyle={{ backgroundColor: "#0E0E12", borderColor: "#1D1D24" }} />
                 <Legend />
                 <Line type="monotone" dataKey="cost" name="Custo Real API" stroke="#FF5500" strokeWidth={2} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="markup_cost" name="Preço Final (Markup)" stroke="#FF9F40" strokeWidth={2} />
+                <Line type="monotone" dataKey="markup_cost" name="Faturamento (Markup)" stroke="#FF9F40" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -222,9 +250,12 @@ export default function Dashboard() {
 
         {/* Agent Cost/Tokens (Bar Chart) */}
         <div className="glass-panel rounded-2xl p-6">
-          <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-6">Gastos por IA (Detalhamento por Agente)</h3>
-          <div className="h-80 w-full">
-            <ResponsiveContainer width="100%" height={320}>
+          <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-6 flex items-center">
+            Gastos por IA
+            <InfoTooltip text="Distribuição de custo consumido e faturamento com markup por cada agente de IA." />
+          </h3>
+          <div className="h-80 w-full overflow-hidden">
+            <ResponsiveContainer width="100%" height="100%">
               <BarChart data={agent_metrics}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1D1D24" />
                 <XAxis dataKey="name" stroke="#9CA3AF" tick={{ fontSize: 10 }} />
@@ -240,15 +271,18 @@ export default function Dashboard() {
 
         {/* Latency averages (Bar Chart) */}
         <div className="glass-panel rounded-2xl p-6">
-          <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-6">Average Model Response Latency (ms)</h3>
-          <div className="h-80 w-full">
-            <ResponsiveContainer width="100%" height={320}>
+          <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-6 flex items-center">
+            Latência Média de Resposta do Modelo (ms)
+            <InfoTooltip text="Média de tempo de resposta em milissegundos para cada agente." />
+          </h3>
+          <div className="h-80 w-full overflow-hidden">
+            <ResponsiveContainer width="100%" height="100%">
               <BarChart data={agent_metrics}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1D1D24" />
                 <XAxis dataKey="name" stroke="#9CA3AF" tick={{ fontSize: 10 }} />
                 <YAxis stroke="#9CA3AF" tick={{ fontSize: 10 }} />
                 <Tooltip contentStyle={{ backgroundColor: "#0E0E12", borderColor: "#1D1D24" }} />
-                <Bar dataKey="latency" name="Latency (ms)" fill="#FF9F40" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="latency" name="Latência (ms)" fill="#FF9F40" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -256,15 +290,18 @@ export default function Dashboard() {
 
         {/* Success / Failure Donut representation */}
         <div className="glass-panel rounded-2xl p-6 flex flex-col justify-between">
-          <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Cumulative Task Outcomes</h3>
-          <div className="flex-1 flex items-center justify-center">
-            <div className="h-60 w-60">
-              <ResponsiveContainer width="100%" height={240}>
+          <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4 flex items-center">
+            Resultados Acumulados de Tarefas
+            <InfoTooltip text="Balanço geral de execuções finalizadas com sucesso versus erros." />
+          </h3>
+          <div className="flex-1 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <div className="h-60 w-60 overflow-hidden">
+              <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={[
-                      { name: "Success Runs", value: agent_metrics.reduce((acc, curr) => acc + curr.success, 0) },
-                      { name: "Failed Runs", value: agent_metrics.reduce((acc, curr) => acc + curr.failed, 0) }
+                      { name: "Sucesso", value: agent_metrics.reduce((acc, curr) => acc + curr.success, 0) },
+                      { name: "Falhas", value: agent_metrics.reduce((acc, curr) => acc + curr.failed, 0) }
                     ]}
                     cx="50%"
                     cy="50%"
@@ -280,14 +317,14 @@ export default function Dashboard() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div className="space-y-2 text-sm text-dark-muted font-medium ml-4">
+            <div className="space-y-2 text-sm text-dark-muted font-medium ml-0 sm:ml-4">
               <div className="flex items-center gap-2">
                 <div className="w-3.5 h-3.5 bg-brand-primary rounded-full" />
-                <span>Success: {agent_metrics.reduce((acc, curr) => acc + curr.success, 0)} runs</span>
+                <span>Sucesso: {agent_metrics.reduce((acc, curr) => acc + curr.success, 0)} runs</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3.5 h-3.5 bg-dark-border rounded-full" />
-                <span>Failed: {agent_metrics.reduce((acc, curr) => acc + curr.failed, 0)} runs</span>
+                <span>Falhas: {agent_metrics.reduce((acc, curr) => acc + curr.failed, 0)} runs</span>
               </div>
             </div>
           </div>
@@ -296,12 +333,13 @@ export default function Dashboard() {
 
       {/* Agent Health Grid Table */}
       <div className="glass-panel rounded-2xl p-6">
-        <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-6 flex items-center gap-2">
-          <Gauge className="text-brand-primary" />
+        <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-6 flex items-center">
+          <Gauge className="text-brand-primary mr-2" />
           <span>Status e Saúde Operacional dos Agentes</span>
+          <InfoTooltip text="Estado operacional, saúde e dados consolidados de consumo por agente." />
         </h3>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-sm">
+          <table className="w-full text-left border-collapse text-sm min-w-[700px]">
             <thead>
               <tr className="border-b border-dark-border text-xs text-dark-muted font-semibold uppercase tracking-wider">
                 <th className="pb-3">Agente</th>
@@ -332,13 +370,14 @@ export default function Dashboard() {
 
       {/* Top Consuming Tasks Grid */}
       <div className="glass-panel rounded-2xl p-6">
-        <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-6 flex items-center gap-2">
-          <Activity className="text-brand-primary animate-pulse" />
+        <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-6 flex items-center">
+          <Activity className="text-brand-primary animate-pulse mr-2" />
           <span>Top Tarefas por Consumo de Tokens</span>
+          <InfoTooltip text="Lista de tarefas da empresa que mais demandaram uso de recursos (tokens)." />
         </h3>
         {top_tasks.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-sm">
+            <table className="w-full text-left border-collapse text-sm min-w-[750px]">
               <thead>
                 <tr className="border-b border-dark-border text-xs text-dark-muted font-semibold uppercase tracking-wider">
                   <th className="pb-3">ID da Tarefa</th>

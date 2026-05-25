@@ -200,7 +200,7 @@ export default function OrgChart() {
   const handleImportOpenClaw = async (e) => {
     e.preventDefault();
     if (!openClawText.trim()) {
-      alert("Please paste the OpenClaw configuration JSON.");
+      alert("Por favor, cole a configuração JSON do OpenClaw.");
       return;
     }
 
@@ -217,14 +217,14 @@ export default function OrgChart() {
         boss_agent_id: importBossId || null
       });
 
-      alert(`Agent '${res.data.name}' imported successfully!`);
+      alert(`Agente '${res.data.name}' importado com sucesso!`);
       setShowImportModal(false);
       setOpenClawText("");
       setImportBossId("");
       fetchAgents();
     } catch (err) {
       console.error(err);
-      alert("Failed to parse or import OpenClaw agent configuration. Ensure it is valid JSON.");
+      alert("Falha ao analisar ou importar a configuração do agente OpenClaw. Verifique se é um JSON válido.");
     } finally {
       setImporting(false);
     }
@@ -268,20 +268,20 @@ export default function OrgChart() {
       setSelectedTools([]);
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.detail || "Failed to create agent.");
+      alert(err.response?.data?.detail || "Falha ao criar agente.");
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDeleteAgent = async (id) => {
-    if (!confirm("Are you sure you want to fire this agent? Any subordinates reporting to them will report directly to the CEO/None.")) return;
+    if (!confirm("Tem certeza que deseja demitir este agente? Quaisquer subordinados que se reportavam a ele passarão a se reportar diretamente ao CEO/Nenhum.")) return;
     try {
       await agentAPI.delete(id);
       setAgents(prev => prev.filter(a => a.id !== id));
     } catch (err) {
       console.error(err);
-      alert("Failed to terminate agent.");
+      alert("Falha ao demitir agente.");
     }
   };
 
@@ -311,19 +311,19 @@ export default function OrgChart() {
                 agent.status === 'active' ? 'bg-brand-primary/15 text-brand-primary border border-brand-primary/20' : 'bg-brand-danger/15 text-brand-danger border border-brand-danger/20'
               }`}>
                 {agent.status === 'active' && <span className="w-1 h-1 bg-brand-primary rounded-full animate-pulse-dot" />}
-                {agent.status}
+                {agent.status === 'active' ? 'Ativo' : agent.status}
               </span>
               <button
                 onClick={() => setInspectedAgent(agent)}
                 className="text-brand-primary hover:bg-brand-primary/10 p-1.5 rounded-lg transition-all border border-transparent hover:border-brand-primary/25"
-                title="Inspect Agent Work"
+                title="Inspecionar Trabalho do Agente"
               >
                 <Layers size={13} />
               </button>
               <button
                 onClick={() => handleDeleteAgent(agent.id)}
                 className="text-brand-danger hover:bg-brand-danger/10 p-1.5 rounded-lg transition-all border border-transparent hover:border-brand-danger/25"
-                title="Fire Agent"
+                title="Demitir Agente"
               >
                 <Trash2 size={13} />
               </button>
@@ -332,15 +332,15 @@ export default function OrgChart() {
 
           <div className="space-y-2 border-t border-dark-border/40 pt-3 text-xs text-dark-muted">
             <div className="flex justify-between">
-              <span>Model:</span>
+              <span>Modelo:</span>
               <span className="font-mono text-white text-[11px] bg-dark-bg px-2 py-0.5 rounded border border-dark-border/60">{agent.model}</span>
             </div>
             <div className="flex justify-between">
-              <span>Monthly Budget:</span>
+              <span>Orçamento Mensal:</span>
               <span className="font-semibold text-white">${agent.monthly_budget_usd.toFixed(2)}</span>
             </div>
             <div>
-              <span className="block mb-1.5 font-semibold text-white/80">Permissions / Tools:</span>
+              <span className="block mb-1.5 font-semibold text-white/80">Permissões / Ferramentas:</span>
               <div className="flex flex-wrap gap-1">
                 {agent.tools.length > 0 ? (
                   agent.tools.map(tool => (
@@ -349,7 +349,7 @@ export default function OrgChart() {
                     </span>
                   ))
                 ) : (
-                  <span className="text-[10px] italic">No tools assigned</span>
+                  <span className="text-[10px] italic">Nenhuma ferramenta atribuída</span>
                 )}
               </div>
             </div>
@@ -380,7 +380,7 @@ export default function OrgChart() {
     return (
       <div className="h-96 flex flex-col items-center justify-center gap-3 text-dark-muted">
         <Loader2 size={32} className="animate-spin text-brand-primary" />
-        <span>Charting organization lines...</span>
+        <span>Carregando organograma...</span>
       </div>
     );
   }
@@ -390,9 +390,9 @@ export default function OrgChart() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Corporate Hierarchy Chart</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Organograma Corporativo</h1>
           <p className="text-dark-muted text-sm">
-            Visual tree mapping reporting structure, individual agent prompts, temperatures, cost caps, and granular system tools.
+            Mapeamento visual da estrutura de subordinação, prompts individuais dos agentes, limites de custo e ferramentas do sistema.
           </p>
         </div>
         <div className="flex gap-3">
@@ -400,14 +400,14 @@ export default function OrgChart() {
             onClick={() => setShowImportModal(true)}
             className="bg-dark-bg/60 border border-dark-border hover:border-brand-primary text-white font-semibold rounded-xl px-5 py-3 text-sm transition-all flex items-center gap-2"
           >
-            <span>Import OpenClaw</span>
+            <span>Importar OpenClaw</span>
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
             className="bg-brand-primary hover:bg-brand-primary/95 text-white font-semibold rounded-xl px-5 py-3 text-sm transition-colors shadow-lg shadow-brand-primary/20 flex items-center gap-2"
           >
             <Plus size={16} />
-            <span>Hire New Agent</span>
+            <span>Contratar Novo Agente</span>
           </button>
         </div>
       </div>
@@ -430,8 +430,8 @@ export default function OrgChart() {
         ) : (
           <div className="text-center py-20 text-dark-muted max-w-sm">
             <Network size={48} className="mx-auto mb-4 text-dark-border" />
-            <h3 className="font-bold text-white text-lg">Empty Org Chart</h3>
-            <p className="text-sm mt-1">Hire your first agent to kick off operations.</p>
+            <h3 className="font-bold text-white text-lg">Organograma Vazio</h3>
+            <p className="text-sm mt-1">Contrate seu primeiro agente para iniciar as operações.</p>
           </div>
         )}
       </div>
@@ -442,15 +442,15 @@ export default function OrgChart() {
           <div className="w-full max-w-2xl glass-panel rounded-2xl p-8 relative shadow-2xl my-8">
             <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-3">
               <Plus className="text-brand-primary" />
-              <span>Hire Enterprise Agent</span>
+              <span>Contratar Agente Corporativo</span>
             </h2>
-            <p className="text-dark-muted text-sm mb-6">Create a new agent workspace node, configuring prompts, budgets, and reporting hierarchy.</p>
+            <p className="text-dark-muted text-sm mb-6">Crie um novo agente, configurando prompts, orçamentos e hierarquia de subordinação.</p>
             
             <form onSubmit={handleCreateAgent} className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-                    Agent Name
+                    Nome do Agente
                   </label>
                   <input
                     type="text"
@@ -464,7 +464,7 @@ export default function OrgChart() {
 
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-                    Title / Role
+                    Cargo / Função
                   </label>
                   <input
                     type="text"
@@ -472,14 +472,14 @@ export default function OrgChart() {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     className="w-full bg-dark-bg border border-dark-border focus:border-brand-primary rounded-xl px-4 py-3 text-white text-sm outline-none transition-colors"
-                    placeholder="Chief Executive Officer"
+                    placeholder="ex: Diretor de Tráfego"
                   />
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-                  System / Role Prompt
+                  System Prompt (Instruções do Agente)
                 </label>
                 <textarea
                   required
@@ -487,21 +487,21 @@ export default function OrgChart() {
                   value={rolePrompt}
                   onChange={(e) => setRolePrompt(e.target.value)}
                   className="w-full bg-dark-bg border border-dark-border focus:border-brand-primary rounded-xl px-4 py-3 text-white text-sm outline-none transition-colors resize-none"
-                  placeholder="Define the agent instructions, boundary conditions, and decision criteria..."
+                  placeholder="Defina as instruções do agente, condições de limite e critérios de decisão..."
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-                    Reports to (Boss)
+                    Reporta-se a (Líder)
                   </label>
                   <select
                     value={bossAgentId}
                     onChange={(e) => setBossAgentId(e.target.value)}
                     className="w-full bg-dark-bg border border-dark-border focus:border-brand-primary rounded-xl px-4 py-3 text-white text-sm outline-none"
                   >
-                    <option value="">None (Top Level Node)</option>
+                    <option value="">Nenhum (Nível Principal)</option>
                     {agents.map(a => (
                       <option key={a.id} value={a.id}>{a.name} ({a.title})</option>
                     ))}
@@ -510,7 +510,7 @@ export default function OrgChart() {
 
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-                    Model
+                    Modelo
                   </label>
                   <select
                     value={model}
@@ -526,7 +526,7 @@ export default function OrgChart() {
                     <option value="gemini-1.5-flash">Gemini 1.5 Flash (Google)</option>
                     <option value="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0">Bedrock Claude 3.5 Sonnet</option>
                     <option value="bedrock/anthropic.claude-3-haiku-20240307-v1:0">Bedrock Claude 3 Haiku</option>
-                    <option value="custom_input">Custom Model...</option>
+                    <option value="custom_input">Modelo Personalizado...</option>
                   </select>
                   {model === "custom_input" && (
                     <input
@@ -535,14 +535,14 @@ export default function OrgChart() {
                       value={customModel}
                       onChange={(e) => setCustomModel(e.target.value)}
                       className="w-full bg-dark-bg border border-dark-border focus:border-brand-primary rounded-xl px-4 py-2.5 text-white text-xs outline-none placeholder-dark-muted"
-                      placeholder="e.g. openrouter/google/gemini-2.5-pro"
+                      placeholder="ex: openrouter/google/gemini-2.5-pro"
                     />
                   )}
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-                    Monthly Budget (USD)
+                    Orçamento Mensal (USD)
                   </label>
                   <input
                     type="number"
@@ -557,18 +557,18 @@ export default function OrgChart() {
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-3">
-                  Granular Tool Access (Least Privilege)
+                  Acesso Granular a Ferramentas (Menor Privilégio)
                 </label>
                 <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                   {[
-                    { name: "delegate_task", label: "Delegate Task" },
-                    { name: "request_approval", label: "Request Approval" },
-                    { name: "web_search", label: "Web Search" },
-                    { name: "read_write_file", label: "Read/Write File" },
-                    { name: "run_bash_command", label: "Run Bash" },
+                    { name: "delegate_task", label: "Delegar Tarefa" },
+                    { name: "request_approval", label: "Solicitar Aprovação" },
+                    { name: "web_search", label: "Pesquisa Web" },
+                    { name: "read_write_file", label: "Ler/Gravar Arquivos" },
+                    { name: "run_bash_command", label: "Executar Bash" },
                     { name: "publish_meta_campaign", label: "Meta Ads" },
-                    { name: "generate_image_asset", label: "Image Gen" },
-                    { name: "hire_agent", label: "Hire Agent" }
+                    { name: "generate_image_asset", label: "Gerador Imagens" },
+                    { name: "hire_agent", label: "Contratar Agente" }
                   ].map(tool => {
                     const isChecked = selectedTools.includes(tool.name);
                     return (
@@ -595,7 +595,7 @@ export default function OrgChart() {
                   onClick={() => setShowCreateModal(false)}
                   className="border border-dark-border hover:bg-dark-border/20 text-white font-semibold rounded-xl px-6 py-2.5 text-sm transition-colors"
                 >
-                  Cancel
+                  Cancelar
                 </button>
                 <button
                   type="submit"
@@ -603,7 +603,7 @@ export default function OrgChart() {
                   className="bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold rounded-xl px-6 py-2.5 text-sm transition-colors shadow-lg shadow-brand-primary/20 flex items-center gap-2"
                 >
                   {submitting && <Loader2 size={16} className="animate-spin" />}
-                  <span>Hire Agent</span>
+                  <span>Contratar Agente</span>
                 </button>
               </div>
             </form>
@@ -826,21 +826,21 @@ export default function OrgChart() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="w-full max-w-2xl glass-panel rounded-2xl p-8 relative shadow-2xl my-8 border border-brand-primary/20">
             <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-3">
-              <span>Import OpenClaw Agent</span>
+              <span>Importar Agente OpenClaw</span>
             </h2>
-            <p className="text-dark-muted text-sm mb-6">Paste your <code>openclaw.json</code> config file content below to register your agent in the organization.</p>
+            <p className="text-dark-muted text-sm mb-6">Cole o conteúdo do seu arquivo de configuração <code>openclaw.json</code> abaixo para registrar seu agente na organização.</p>
             
             <form onSubmit={handleImportOpenClaw} className="space-y-5">
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-                  Reporting Manager (Boss Agent)
+                  Líder Responsável (Líder do Agente)
                 </label>
                 <select
                   value={importBossId}
                   onChange={(e) => setImportBossId(e.target.value)}
                   className="w-full bg-dark-bg border border-dark-border focus:border-brand-primary rounded-xl px-3 py-3 text-white text-sm outline-none"
                 >
-                  <option value="">No Reporting Manager (Root/CEO)</option>
+                  <option value="">Sem Líder Responsável (CEO/Raiz)</option>
                   {agents.map(a => (
                     <option key={a.id} value={a.id}>{a.name} ({a.title})</option>
                   ))}
@@ -849,7 +849,7 @@ export default function OrgChart() {
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
-                  openclaw.json Configuration Content
+                  Conteúdo da Configuração openclaw.json
                 </label>
                 <textarea
                   required
@@ -857,7 +857,7 @@ export default function OrgChart() {
                   value={openClawText}
                   onChange={(e) => setOpenClawText(e.target.value)}
                   className="w-full bg-dark-bg border border-dark-border focus:border-brand-primary rounded-xl px-4 py-3 text-white text-sm outline-none font-mono"
-                  placeholder={`{\n  "gateway": {\n    "name": "Traffic Specialist",\n    "model": "gpt-4o-mini",\n    "system_prompt": "Manage Meta ad accounts...",\n    "allowed_tools": ["shell", "web"]\n  }\n}`}
+                  placeholder={`{\n  "gateway": {\n    "name": "Especialista em Tráfego",\n    "model": "gpt-4o-mini",\n    "system_prompt": "Gerenciar contas de anúncios do Meta...",\n    "allowed_tools": ["shell", "web"]\n  }\n}`}
                 />
               </div>
 
@@ -871,7 +871,7 @@ export default function OrgChart() {
                   }}
                   className="px-5 py-3 rounded-xl border border-dark-border hover:bg-dark-bg text-dark-muted hover:text-white font-semibold text-sm transition-all"
                 >
-                  Cancel
+                  Cancelar
                 </button>
                 <button
                   type="submit"
@@ -879,7 +879,7 @@ export default function OrgChart() {
                   className="px-6 py-3 rounded-xl bg-brand-primary hover:bg-brand-primary/95 text-white font-bold text-sm shadow-lg shadow-brand-primary/10 transition-colors flex items-center gap-2"
                 >
                   {importing ? <Loader2 size={16} className="animate-spin" /> : null}
-                  <span>Import Agent</span>
+                  <span>Importar Agente</span>
                 </button>
               </div>
             </form>
