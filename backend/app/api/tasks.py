@@ -86,15 +86,23 @@ async def debug_workspace():
 async def debug_setup_run_campaign(db: AsyncSession = Depends(get_db)):
     import os
     from app.models.task import Task
+    from app.models.agent import Agent
     from app.services.agent_executor import AgentExecutor
+    from sqlalchemy import update
     
-    # 1. Ensure workspace directory exists
+    # 1. Update all company 6 agents to use gemini-1.5-flash
+    await db.execute(
+        update(Agent).filter(Agent.company_id == 6).values(model="gemini-1.5-flash")
+    )
+    await db.commit()
+    
+    # 2. Ensure workspace directory exists
     workspace_dir = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..", "..", "workspace", "company_6")
     )
     os.makedirs(workspace_dir, exist_ok=True)
     
-    # 2. Write briefing_campanha.txt
+    # 3. Write briefing_campanha.txt
     briefing_content = (
         "Briefing da Campanha de Tráfego Pago:\n\n"
         "Objetivo: Gerar leads qualificados para o nosso serviço de \"TIME DE TRAFEGO PAGO\".\n"
@@ -109,7 +117,7 @@ async def debug_setup_run_campaign(db: AsyncSession = Depends(get_db)):
     with open(os.path.join(workspace_dir, "briefing_campanha.txt"), "w", encoding="utf-8") as f:
         f.write(briefing_content)
         
-    # 3. Reset Task 7 status to todo
+    # 4. Reset Task 7 status to todo
     task = await db.get(Task, 7)
     if not task:
         return {"error": "Task 7 not found"}
@@ -117,7 +125,7 @@ async def debug_setup_run_campaign(db: AsyncSession = Depends(get_db)):
     task.locked_at = None
     await db.commit()
     
-    # 4. Run Task 7
+    # 5. Run Task 7
     try:
         executor = AgentExecutor(db, company_id=6, agent_id=9, task_id=7)
         result = await executor.execute_run()
