@@ -146,8 +146,15 @@ async def debug_setup_run_campaign(db: AsyncSession = Depends(get_db)):
 async def debug_run_7(db: AsyncSession = Depends(get_db)):
     import traceback
     from app.models.task import Task
+    from app.models.run import Run
     from app.services.agent_executor import AgentExecutor
     from sqlalchemy.future import select
+    from sqlalchemy import update
+    
+    # 1. Reset any running runs for task 7 to failed
+    await db.execute(
+        update(Run).filter(Run.task_id == 7, Run.status == "running").values(status="failed")
+    )
     
     # Fetch task 7
     task = await db.get(Task, 7)
