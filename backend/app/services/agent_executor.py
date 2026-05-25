@@ -1598,61 +1598,101 @@ class AgentExecutor:
             return f"Error executing command: {str(e)}"
 
     async def _tool_execute_meta_campaign(self, payload: Dict[str, Any]) -> str:
-        """Simulates deploying a campaign via Meta Ads Graph API using actual configured credentials."""
+        """Deploys a campaign via Meta Ads Graph API using configured credentials."""
+        import httpx
         campaign_name = payload.get("campaign_name", "Meta Ads Campaign")
         objective = payload.get("objective", "LEAD_GENERATION")
-        budget = payload.get("daily_budget_usd", 10.0)
-        
-        # Try loading Meta Ads config
-        ad_account_id = "983749823"
-        page_id = "unknown_page"
+        budget = float(payload.get("daily_budget_usd", 10.0))
         
         query = select(ApiCredential).filter(
             ApiCredential.company_id == self.company_id,
             ApiCredential.provider == "meta_ads"
         )
         cred = (await self.db.execute(query)).scalars().first()
-        if cred:
-            try:
-                decrypted = decrypt_key(cred.encrypted_key)
-                config_data = json.loads(decrypted)
-                ad_account_id = config_data.get("ad_account_id", ad_account_id)
-                page_id = config_data.get("page_id", page_id)
-            except Exception:
-                # Fallback if key was not stored as JSON
-                pass
+        if not cred:
+            return "Error: Meta Ads credentials are not configured. Please set up the access token and ad account ID first."
+            
+        try:
+            decrypted = decrypt_key(cred.encrypted_key)
+            config_data = json.loads(decrypted)
+            access_token = config_data.get("access_token")
+            ad_account_id = config_data.get("ad_account_id")
+            page_id = config_data.get("page_id", "")
+        except Exception:
+            return "Error: Failed to decrypt or parse Meta Ads credentials."
+            
+        if not access_token or not ad_account_id:
+            return "Error: Meta Access Token or Ad Account ID is missing in configuration."
 
-        # Write campaign metadata inside workspace directory
-        filename = f"meta_campaign_{int(time.time())}.json"
-        clean_filename = os.path.basename(filename)
-        target_path = os.path.abspath(os.path.join(self.workspace_dir, clean_filename))
+        # Call Meta Graph API to actually create the campaign
+        url = f"https://graph.facebook.com/v20.0/act_{ad_account_id}/campaigns"
         
-        campaign_data = {
-            "campaign_name": campaign_name,
-            "objective": objective,
-            "daily_budget_usd": budget,
-            "status": "ACTIVE",
-            "facebook_campaign_id": f"act_{ad_account_id}/camp_{int(time.time())}",
-            "deployed_at": datetime.utcnow().isoformat(),
-            "ad_account_id": ad_account_id,
-            "page_id": page_id,
-            "mode": "AGENT_DEPLOY"
+        # Map objectives. Meta simplified objectives (v15+):
+        # OUTCOMES, SALES, LEADS, TRAFFIC, AWARENESS, ENGAGEMENT, APP_PROMOTION
+        objective_map = {
+            "CONVERSIONS": "OUTCOMES",
+            "LEAD_GENERATION": "OUTCOMES",
+            "TRAFFIC": "TRAFFIC",
+            "REACH": "AWARENESS"
+        }
+        meta_objective = objective_map.get(objective, objective)
+        
+        # Budget in cents
+        budget_cents = int(budget * 100)
+        
+        payload_data = {
+            "name": campaign_name,
+            "objective": meta_objective,
+            "status": "PAUSED", # Create as paused so they can activate it in Meta Ads Manager
+            "daily_budget": budget_cents,
+            "special_ad_categories": "[]", # Required field for Meta API
+            "access_token": access_token
         }
         
-        try:
-            with open(target_path, "w", encoding="utf-8") as f:
-                json.dump(campaign_data, f, indent=2)
-            
-            return (
-                f"SUCCESS: Campaign '{campaign_name}' deployed to Meta Ads Server.\n"
-                f"Ad Account ID: act_{ad_account_id}\n"
-                f"Facebook Campaign ID: {campaign_data['facebook_campaign_id']}\n"
-                f"Status: ACTIVE\n"
-                f"Daily Budget: ${budget} USD\n"
-                f"Local Trace Saved to Workspace: {clean_filename}"
-            )
-        except Exception as e:
-            return f"Error registering Meta campaign deployment: {str(e)}"
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(url, data=payload_data, timeout=15.0)
+                if response.status_code != 200:
+                    try:
+                        err_data = response.json()
+                        err_msg = err_data.get("error", {}).get("message", "Unknown Meta API error")
+                    except Exception:
+                        err_msg = response.text
+                    return f"Error: Meta Ads API returned status code {response.status_code}. Detail: {err_msg}"
+                
+                res_data = response.json()
+                campaign_id = res_data.get("id")
+                
+                campaign_data = {
+                    "campaign_name": campaign_name,
+                    "objective": objective,
+                    "daily_budget_usd": budget,
+                    "status": "PAUSED",
+                    "facebook_campaign_id": campaign_id,
+                    "deployed_at": datetime.utcnow().isoformat(),
+                    "ad_account_id": ad_account_id,
+                    "page_id": page_id,
+                    "mode": "AGENT_DEPLOY"
+                }
+                
+                # Write campaign metadata inside workspace directory
+                filename = f"meta_campaign_{int(time.time())}.json"
+                clean_filename = os.path.basename(filename)
+                target_path = os.path.abspath(os.path.join(self.workspace_dir, clean_filename))
+                
+                with open(target_path, "w", encoding="utf-8") as f:
+                    json.dump(campaign_data, f, indent=2)
+                
+                return (
+                    f"SUCCESS: Campaign '{campaign_name}' deployed to Meta Ads Server.\n"
+                    f"Ad Account ID: act_{ad_account_id}\n"
+                    f"Facebook Campaign ID: {campaign_id}\n"
+                    f"Status: PAUSED\n"
+                    f"Daily Budget: ${budget} USD\n"
+                    f"Local Trace Saved to Workspace: {clean_filename}"
+                )
+            except Exception as e:
+                return f"Error connecting to Meta Ads API: {str(e)}"
 
     async def _tool_generate_image_asset(self, inputs: Dict[str, Any]) -> str:
         """Simulates generating a creative image asset and saves it as a stylized SVG in the workspace."""

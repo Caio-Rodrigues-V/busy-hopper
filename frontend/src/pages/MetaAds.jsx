@@ -397,7 +397,7 @@ export default function MetaAds() {
           <div className="flex justify-between items-center pb-4 border-b border-dark-border/40 mb-6">
             <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
               <Layers className="text-brand-secondary" size={16} />
-              <span>Simulated Campaigns Log</span>
+              <span>Active Campaigns Dashboard</span>
             </h3>
             <button
               onClick={() => setActiveTab("console")}
@@ -409,94 +409,170 @@ export default function MetaAds() {
           </div>
 
           {campaigns.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {campaigns.map((c, i) => {
-                const isAgent = c.mode === "AGENT_DEPLOY";
-                return (
-                  <div key={i} className="bg-dark-bg/65 border border-dark-border/60 hover:border-dark-muted/80 rounded-2xl p-5 space-y-4 transition-all">
-                    <div className="flex justify-between items-start gap-2">
-                      <div>
-                        <h4 className="font-bold text-white text-base leading-tight mb-1 flex items-center gap-2">
-                          <Megaphone size={16} className="text-brand-secondary shrink-0" />
-                          <span>{c.campaign_name}</span>
-                        </h4>
-                        <span className={`inline-block text-[9px] uppercase tracking-wide px-2.5 py-0.5 rounded-full font-bold font-mono ${
-                          c.objective === "CONVERSIONS" ? "bg-brand-secondary/15 text-brand-secondary" :
-                          c.objective === "LEAD_GENERATION" ? "bg-brand-accent/15 text-brand-accent" :
-                          "bg-brand-primary/15 text-brand-primary"
-                        }`}>
-                          {c.objective}
-                        </span>
-                      </div>
-
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border uppercase tracking-wider flex items-center gap-1.5 ${
-                        isAgent
-                          ? "bg-brand-primary/10 border-brand-primary/30 text-brand-primary"
-                          : "bg-brand-accent/15 border-brand-accent/30 text-brand-accent"
-                      }`}>
-                        <span>{isAgent ? "🤖 Agent" : "👤 Manual"}</span>
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2.5 bg-dark-bg/40 p-3 rounded-xl border border-dark-border/30 text-xs">
-                      <div>
-                        <div className="text-[10px] text-dark-muted font-semibold uppercase tracking-wider mb-0.5">Budget</div>
-                        <div className="font-bold text-brand-secondary flex items-center">
-                          <DollarSign size={13} className="shrink-0" />
-                          <span>{c.daily_budget_usd}/day</span>
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] text-dark-muted font-semibold uppercase tracking-wider mb-0.5">Status</div>
-                        <div className="font-bold text-brand-secondary flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 bg-brand-secondary rounded-full animate-ping" />
-                          <span>ACTIVE</span>
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] text-dark-muted font-semibold uppercase tracking-wider mb-0.5">Account</div>
-                        <div className="font-medium text-white truncate font-mono">act_{c.ad_account_id}</div>
-                      </div>
-                    </div>
-
-                    <div className="text-[10px] space-y-1.5 pt-2 border-t border-dark-border/40 text-dark-muted font-medium">
-                      <div className="flex justify-between items-center font-mono">
-                        <span>FB Campaign ID:</span>
-                        <span className="text-white bg-dark-bg px-2 py-0.5 rounded border border-dark-border/60">{c.facebook_campaign_id}</span>
-                      </div>
-                      {c.page_id && (
-                        <div className="flex justify-between items-center font-mono">
-                          <span>Target Page ID:</span>
-                          <span className="text-white">{c.page_id}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between items-center font-mono">
-                        <span className="flex items-center gap-1">
-                          <FileCode size={11} />
-                          <span>Workspace Trace:</span>
-                        </span>
-                        <span className="text-white hover:underline text-[9px] max-w-[200px] truncate" title={c.file_name}>
-                          {c.file_name}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center font-mono">
-                        <span className="flex items-center gap-1">
-                          <Calendar size={11} />
-                          <span>Deployed At:</span>
-                        </span>
-                        <span className="text-white">
-                          {new Date(c.deployed_at).toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
+            <div className="space-y-6">
+              {/* Overview Metrics Dashboard */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-dark-bg/40 rounded-2xl p-4 flex items-center justify-between border border-dark-border/40">
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-dark-muted tracking-wider">Total Active Budget</p>
+                    <h4 className="text-xl font-bold text-white mt-1">
+                      ${campaigns.reduce((acc, c) => acc + (c.daily_budget_usd || 0), 0).toFixed(2)}/day
+                    </h4>
                   </div>
-                );
-              })}
+                  <div className="p-3 bg-brand-primary/10 text-brand-primary rounded-xl">
+                    <DollarSign size={20} />
+                  </div>
+                </div>
+                
+                <div className="bg-dark-bg/40 rounded-2xl p-4 flex items-center justify-between border border-dark-border/40">
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-dark-muted tracking-wider">Total Spend (Real)</p>
+                    <h4 className="text-xl font-bold text-brand-secondary mt-1">
+                      ${campaigns.reduce((acc, c) => acc + (c.total_spent || 0), 0).toFixed(2)}
+                    </h4>
+                  </div>
+                  <div className="p-3 bg-brand-secondary/10 text-brand-secondary rounded-xl">
+                    <Activity size={20} />
+                  </div>
+                </div>
+
+                <div className="bg-dark-bg/40 rounded-2xl p-4 flex items-center justify-between border border-dark-border/40">
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-dark-muted tracking-wider">Average CTR</p>
+                    <h4 className="text-xl font-bold text-white mt-1">
+                      {(campaigns.reduce((acc, c) => acc + (c.ctr || 0), 0) / campaigns.length).toFixed(2)}%
+                    </h4>
+                  </div>
+                  <div className="p-3 bg-brand-accent/10 text-brand-accent rounded-xl">
+                    <Eye size={20} />
+                  </div>
+                </div>
+
+                <div className="bg-dark-bg/40 rounded-2xl p-4 flex items-center justify-between border border-dark-border/40">
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-dark-muted tracking-wider">Total Conversions</p>
+                    <h4 className="text-xl font-bold text-white mt-1">
+                      {campaigns.reduce((acc, c) => acc + (c.conversions || 0), 0)}
+                    </h4>
+                  </div>
+                  <div className="p-3 bg-brand-secondary/15 text-brand-secondary rounded-xl">
+                    <CheckCircle2 size={20} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Campaigns Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {campaigns.map((c, i) => {
+                  const isAgent = c.mode === "AGENT_DEPLOY";
+                  return (
+                    <div key={i} className="bg-dark-bg/65 border border-dark-border/60 hover:border-dark-muted/80 rounded-2xl p-5 space-y-4 transition-all">
+                      <div className="flex justify-between items-start gap-2">
+                        <div>
+                          <h4 className="font-bold text-white text-base leading-tight mb-1 flex items-center gap-2">
+                            <Megaphone size={16} className="text-brand-secondary shrink-0" />
+                            <span>{c.campaign_name}</span>
+                          </h4>
+                          <span className={`inline-block text-[9px] uppercase tracking-wide px-2.5 py-0.5 rounded-full font-bold font-mono ${
+                            c.objective === "CONVERSIONS" || c.objective === "OUTCOMES" ? "bg-brand-secondary/15 text-brand-secondary" :
+                            c.objective === "LEAD_GENERATION" ? "bg-brand-accent/15 text-brand-accent" :
+                            "bg-brand-primary/15 text-brand-primary"
+                          }`}>
+                            {c.objective}
+                          </span>
+                        </div>
+
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border uppercase tracking-wider flex items-center gap-1.5 ${
+                          isAgent
+                            ? "bg-brand-primary/10 border-brand-primary/30 text-brand-primary"
+                            : "bg-brand-accent/15 border-brand-accent/30 text-brand-accent"
+                        }`}>
+                          <span>{isAgent ? "🤖 Agent" : "👤 Manual"}</span>
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2.5 bg-dark-bg/40 p-3 rounded-xl border border-dark-border/30 text-xs">
+                        <div>
+                          <div className="text-[10px] text-dark-muted font-semibold uppercase tracking-wider mb-0.5">Budget</div>
+                          <div className="font-bold text-white flex items-center">
+                            <DollarSign size={13} className="shrink-0 text-brand-primary" />
+                            <span>{c.daily_budget_usd}/day</span>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-dark-muted font-semibold uppercase tracking-wider mb-0.5">Total Spent</div>
+                          <div className="font-bold text-brand-secondary flex items-center">
+                            <DollarSign size={13} className="shrink-0" />
+                            <span>{c.total_spent?.toFixed(2) || "0.00"}</span>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-dark-muted font-semibold uppercase tracking-wider mb-0.5">Health</div>
+                          <span className={`inline-block text-[9px] uppercase tracking-wide px-2 py-0.5 rounded font-bold ${
+                            c.health === "Excellent" ? "bg-brand-secondary/15 text-brand-secondary border border-brand-secondary/30" :
+                            c.health === "Stable" ? "bg-brand-accent/15 text-brand-accent border border-brand-accent/30" :
+                            c.health === "Underperforming" ? "bg-brand-danger/10 text-brand-danger border border-brand-danger/30" :
+                            "bg-dark-border text-dark-muted"
+                          }`}>
+                            {c.health || "Active"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-4 gap-2 text-center text-[10px] bg-dark-bg/20 p-2.5 rounded-xl border border-dark-border/20">
+                        <div>
+                          <div className="text-dark-muted mb-0.5">Impressions</div>
+                          <div className="font-bold text-white">{c.impressions?.toLocaleString() || 0}</div>
+                        </div>
+                        <div>
+                          <div className="text-dark-muted mb-0.5">Clicks</div>
+                          <div className="font-bold text-white">{c.clicks?.toLocaleString() || 0}</div>
+                        </div>
+                        <div>
+                          <div className="text-dark-muted mb-0.5">CTR</div>
+                          <div className="font-bold text-white">{(c.ctr || 0).toFixed(2)}%</div>
+                        </div>
+                        <div>
+                          <div className="text-dark-muted mb-0.5">ROAS</div>
+                          <div className="font-bold text-brand-secondary">{(c.roas || 0).toFixed(2)}x</div>
+                        </div>
+                      </div>
+
+                      <div className="text-[10px] space-y-1.5 pt-2 border-t border-dark-border/40 text-dark-muted font-medium">
+                        <div className="flex justify-between items-center font-mono">
+                          <span>Status:</span>
+                          <span className={`font-bold flex items-center gap-1.5 ${c.status === "ACTIVE" ? "text-brand-secondary" : "text-dark-muted"}`}>
+                            {c.status === "ACTIVE" && <span className="w-1.5 h-1.5 bg-brand-secondary rounded-full animate-ping" />}
+                            {c.status}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center font-mono">
+                          <span>Conversions (Leads):</span>
+                          <span className="text-white font-bold">{c.conversions || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center font-mono">
+                          <span>FB Campaign ID:</span>
+                          <span className="text-white bg-dark-bg px-2 py-0.5 rounded border border-dark-border/60">{c.facebook_campaign_id}</span>
+                        </div>
+                        <div className="flex justify-between items-center font-mono">
+                          <span className="flex items-center gap-1">
+                            <Calendar size={11} />
+                            <span>Deployed At:</span>
+                          </span>
+                          <span className="text-white">
+                            {new Date(c.deployed_at).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           ) : (
             <div className="h-48 border border-dashed border-dark-border/60 rounded-2xl flex flex-col items-center justify-center text-xs text-dark-muted gap-2 italic">
               <Megaphone size={24} className="text-dark-muted" />
-              <span>No Meta campaigns registered in the company's workspace yet.</span>
+              <span>No active Meta campaigns found. Ensure your Meta integration settings are configured.</span>
             </div>
           )}
         </div>

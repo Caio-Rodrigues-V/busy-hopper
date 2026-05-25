@@ -104,3 +104,81 @@ def test_svg_image_banner_generation():
     assert "</svg>" in svg_content
     assert prompt in svg_content
     assert filename not in svg_content
+
+@pytest.mark.asyncio
+async def test_real_campaign_listing_and_parsing():
+    from app.api.meta import list_meta_campaigns
+    from unittest.mock import AsyncMock, MagicMock, patch
+    
+    # Mock company object
+    mock_company = MagicMock()
+    mock_company.id = 1
+    
+    # Mock db session
+    mock_db = AsyncMock()
+    mock_result = MagicMock()
+    
+    # Mock credential record
+    mock_cred = MagicMock()
+    from app.core.security import encrypt_key
+    mock_cred.encrypted_key = encrypt_key(json.dumps({
+        "access_token": "EAA_test_token",
+        "ad_account_id": "123456"
+    }))
+    
+    mock_result.scalars.return_value.first.return_value = mock_cred
+    mock_db.execute.return_value = mock_result
+    
+    # Mock HTTP response
+    mock_response_data = {
+        "data": [
+            {
+                "id": "120202020",
+                "name": "Conversion Ad Set Test",
+                "objective": "OUTCOMES",
+                "daily_budget": "5000",
+                "status": "ACTIVE",
+                "created_time": "2026-05-25T12:00:00+0000",
+                "insights": {
+                    "data": [
+                        {
+                            "spend": "45.50",
+                            "impressions": "15000",
+                            "clicks": "450",
+                            "ctr": "3.0",
+                            "conversions": "15",
+                            "actions": [
+                                {
+                                    "action_type": "omni_purchase",
+                                    "value": "150.0"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+    
+    with patch("httpx.AsyncClient.get") as mock_get:
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: mock_response_data
+        )
+        
+        campaigns = await list_meta_campaigns(db=mock_db, company=mock_company)
+        
+        assert len(campaigns) == 1
+        campaign = campaigns[0]
+        assert campaign["campaign_name"] == "Conversion Ad Set Test"
+        assert campaign["objective"] == "OUTCOMES"
+        assert campaign["daily_budget_usd"] == 50.0
+        assert campaign["total_spent"] == 45.50
+        assert campaign["impressions"] == 15000
+        assert campaign["clicks"] == 450
+        assert campaign["ctr"] == 3.0
+        assert campaign["conversions"] == 15
+        assert abs(campaign["roas"] - (150.0 / 45.50)) < 0.001
+        assert campaign["health"] == "Excellent"
+        assert campaign["status"] == "ACTIVE"
+

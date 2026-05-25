@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 import os
 import json
 import time
+import httpx
 from datetime import datetime
 from typing import Optional
 
@@ -135,88 +136,217 @@ async def create_meta_campaign(
     try:
         decrypted = decrypt_key(cred.encrypted_key)
         config_data = json.loads(decrypted)
+        access_token = config_data.get("access_token")
         ad_account_id = config_data.get("ad_account_id")
-        page_id = config_data.get("page_id")
+        page_id = config_data.get("page_id", "")
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Meta Ads configuration is invalid or corrupted. Please re-configure."
         )
 
-    # Perform Simulated Deploy
-    workspace_dir = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "..", "workspace", f"company_{company.id}")
-    )
-    os.makedirs(workspace_dir, exist_ok=True)
+    if not access_token or not ad_account_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Meta Access Token and Ad Account ID are required."
+        )
+
+    # Call Meta Graph API to actually create the campaign
+    url = f"https://graph.facebook.com/v20.0/act_{ad_account_id}/campaigns"
     
-    timestamp = int(time.time())
-    filename = f"manual_meta_campaign_{timestamp}.json"
-    target_path = os.path.join(workspace_dir, filename)
+    # Map objectives. Meta simplified objectives (v15+):
+    # OUTCOMES, SALES, LEADS, TRAFFIC, AWARENESS, ENGAGEMENT, APP_PROMOTION
+    objective_map = {
+        "CONVERSIONS": "OUTCOMES",
+        "LEAD_GENERATION": "OUTCOMES",
+        "TRAFFIC": "TRAFFIC",
+        "REACH": "AWARENESS"
+    }
+    meta_objective = objective_map.get(campaign_in.objective, campaign_in.objective)
     
-    campaign_id = f"act_{ad_account_id}/camp_{timestamp}"
-    campaign_data = {
-        "campaign_name": campaign_in.campaign_name,
-        "objective": campaign_in.objective,
-        "daily_budget_usd": campaign_in.daily_budget_usd,
-        "status": "ACTIVE",
-        "facebook_campaign_id": campaign_id,
-        "deployed_at": datetime.utcnow().isoformat(),
-        "ad_account_id": ad_account_id,
-        "page_id": page_id,
-        "mode": "MANUAL_DEPLOY"
+    # Budget in cents
+    budget_cents = int(campaign_in.daily_budget_usd * 100)
+    
+    payload = {
+        "name": campaign_in.campaign_name,
+        "objective": meta_objective,
+        "status": "PAUSED", # Create as paused so they can activate it in Meta Ads Manager
+        "daily_budget": budget_cents,
+        "special_ad_categories": "[]", # Required field for Meta API
+        "access_token": access_token
     }
     
-    with open(target_path, "w", encoding="utf-8") as f:
-        json.dump(campaign_data, f, indent=2)
-        
-    # Create Audit log entry
-    await create_audit_entry(
-        db, company.id, f"user_{current_user.id}",
-        "DEPLOY_META_CAMPAIGN_MANUAL",
-        {
-            "campaign_name": campaign_in.campaign_name,
-            "objective": campaign_in.objective,
-            "daily_budget_usd": campaign_in.daily_budget_usd,
-            "facebook_campaign_id": campaign_id
-        }
-    )
-    
-    # Broadcast status via websocket
-    await manager.broadcast_to_company(company.id, {
-        "type": "meta_campaign_deployed",
-        "campaign_name": campaign_in.campaign_name,
-        "facebook_campaign_id": campaign_id
-    })
-    
-    return {
-        "status": "success",
-        "message": f"Simulated Meta campaign '{campaign_in.campaign_name}' deployed successfully.",
-        "details": campaign_data
-    }
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(url, data=payload, timeout=15.0)
+            if response.status_code != 200:
+                try:
+                    err_data = response.json()
+                    err_msg = err_data.get("error", {}).get("message", "Unknown Meta API error")
+                except Exception:
+                    err_msg = response.text
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Meta Ads API Error: {err_msg}"
+                )
+            
+            res_data = response.json()
+            campaign_id = res_data.get("id")
+            
+            campaign_data = {
+                "campaign_name": campaign_in.campaign_name,
+                "objective": campaign_in.objective,
+                "daily_budget_usd": campaign_in.daily_budget_usd,
+                "status": "PAUSED",
+                "facebook_campaign_id": campaign_id,
+                "deployed_at": datetime.utcnow().isoformat(),
+                "ad_account_id": ad_account_id,
+                "page_id": page_id,
+                "mode": "REAL_DEPLOY"
+            }
+            
+            # Save local campaign trace
+            workspace_dir = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "..", "workspace", f"company_{company.id}")
+            )
+            os.makedirs(workspace_dir, exist_ok=True)
+            timestamp = int(time.time())
+            filename = f"meta_campaign_{timestamp}.json"
+            target_path = os.path.join(workspace_dir, filename)
+            
+            with open(target_path, "w", encoding="utf-8") as f:
+                json.dump(campaign_data, f, indent=2)
+                
+            await create_audit_entry(
+                db, company.id, f"user_{current_user.id}",
+                "DEPLOY_META_CAMPAIGN_REAL",
+                {
+                    "campaign_name": campaign_in.campaign_name,
+                    "objective": campaign_in.objective,
+                    "daily_budget_usd": campaign_in.daily_budget_usd,
+                    "facebook_campaign_id": campaign_id
+                }
+            )
+            
+            await manager.broadcast_to_company(company.id, {
+                "type": "meta_campaign_deployed",
+                "campaign_name": campaign_in.campaign_name,
+                "facebook_campaign_id": campaign_id
+            })
+            
+            return {
+                "status": "success",
+                "message": f"Real Meta campaign '{campaign_in.campaign_name}' deployed successfully.",
+                "details": campaign_data
+            }
+        except httpx.RequestError as e:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Network error communicating with Meta API: {str(e)}"
+            )
 
 @router.get("/campaigns")
 async def list_meta_campaigns(
+    db: AsyncSession = Depends(get_db),
     company: Company = Depends(get_current_company)
 ):
-    workspace_dir = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "..", "workspace", f"company_{company.id}")
+    # Find existing credential for provider meta_ads
+    query = select(ApiCredential).filter(
+        ApiCredential.company_id == company.id,
+        ApiCredential.provider == "meta_ads"
     )
-    if not os.path.exists(workspace_dir):
+    cred = (await db.execute(query)).scalars().first()
+    if not cred:
         return []
+        
+    try:
+        decrypted = decrypt_key(cred.encrypted_key)
+        config_data = json.loads(decrypted)
+        access_token = config_data.get("access_token")
+        ad_account_id = config_data.get("ad_account_id")
+    except Exception:
+        return []
+        
+    if not access_token or not ad_account_id:
+        return []
+
+    # Call Meta Graph API
+    url = f"https://graph.facebook.com/v20.0/act_{ad_account_id}/campaigns"
+    params = {
+        "fields": "name,objective,daily_budget,status,start_time,created_time,insights{spend,impressions,clicks,conversions,ctr,actions}",
+        "access_token": access_token
+    }
     
-    campaigns = []
-    for fname in os.listdir(workspace_dir):
-        if fname.endswith(".json") and "meta_campaign" in fname:
-            try:
-                fpath = os.path.join(workspace_dir, fname)
-                with open(fpath, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    # Add filename reference
-                    data["file_name"] = fname
-                    campaigns.append(data)
-            except Exception:
-                pass
-    
-    # Sort by deployment date descending
-    campaigns.sort(key=lambda x: x.get("deployed_at", ""), reverse=True)
-    return campaigns
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(url, params=params, timeout=12.0)
+            if response.status_code != 200:
+                return []
+            
+            data = response.json()
+            raw_campaigns = data.get("data", [])
+            
+            campaigns = []
+            for rc in raw_campaigns:
+                # Extract insights
+                insights_list = rc.get("insights", {}).get("data", [])
+                insights = insights_list[0] if insights_list else {}
+                
+                # Daily budget is returned in cents by Meta API
+                daily_budget = float(rc.get("daily_budget", 0)) / 100.0 if rc.get("daily_budget") else 0.0
+                
+                # Spend
+                spend = float(insights.get("spend", 0.0))
+                
+                # CTR, Clicks, Impressions
+                impressions = int(insights.get("impressions", 0))
+                clicks = int(insights.get("clicks", 0))
+                ctr = float(insights.get("ctr", 0.0)) if "ctr" in insights else (clicks / impressions * 100.0 if impressions > 0 else 0.0)
+                
+                # Conversions
+                conversions = int(insights.get("conversions", 0))
+                actions = insights.get("actions", [])
+                if not conversions:
+                    for action in actions:
+                        if action.get("action_type") in ["conversion", "lead", "offsite_conversion.fb_pixel_lead", "purchase", "onsite_conversion.lead_grouped"]:
+                            conversions += int(action.get("value", 0))
+                
+                # ROAS (value of conversions / spend)
+                purchase_value = 0.0
+                for action in actions:
+                    if action.get("action_type") in ["purchase", "omni_purchase", "revenue"]:
+                        purchase_value += float(action.get("value", 0.0))
+                roas = purchase_value / spend if spend > 0 else 0.0
+                
+                # Health status
+                rc_status = rc.get("status", "ACTIVE")
+                if rc_status == "ACTIVE":
+                    if roas >= 2.5:
+                        health = "Excellent"
+                    elif roas >= 1.5:
+                        health = "Stable"
+                    else:
+                        health = "Underperforming"
+                else:
+                    health = "Paused"
+                
+                campaigns.append({
+                    "campaign_name": rc.get("name"),
+                    "objective": rc.get("objective"),
+                    "daily_budget_usd": daily_budget,
+                    "total_spent": spend,
+                    "status": rc_status,
+                    "facebook_campaign_id": rc.get("id"),
+                    "deployed_at": rc.get("created_time") or rc.get("start_time") or datetime.utcnow().isoformat(),
+                    "ad_account_id": ad_account_id,
+                    "impressions": impressions,
+                    "clicks": clicks,
+                    "ctr": ctr,
+                    "conversions": conversions,
+                    "roas": roas,
+                    "health": health,
+                    "mode": "REAL_DEPLOY"
+                })
+            return campaigns
+        except Exception:
+            return []
