@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { dashboardAPI } from "../services/api";
 import { 
   DollarSign, 
@@ -32,14 +32,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    fetchMetrics();
-    // Poll metrics every 10 seconds for real-time cost transparency
-    const timer = setInterval(fetchMetrics, 10000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const fetchMetrics = async () => {
+  async function fetchMetrics() {
     const companyId = localStorage.getItem("companyId");
     if (!companyId) {
       setLoading(false);
@@ -55,7 +48,15 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchMetrics();
+    // Poll metrics every 10 seconds for real-time cost transparency
+    const timer = setInterval(fetchMetrics, 10000);
+    return () => clearInterval(timer);
+  }, []);
 
   if (!localStorage.getItem("companyId")) {
     return (
@@ -90,7 +91,7 @@ export default function Dashboard() {
   const { kpis, cost_over_time, agent_metrics, top_tasks = [] } = metrics;
 
   // Colors for donut chart (strictly Orange and Black/Dark Gray)
-  const PIE_COLORS = ["#FF5500", "#1D1D24"];
+
 
   // Helper for agent status badges
   const getStatusBadge = (status) => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { metaAPI } from "../services/api";
 import {
   Megaphone,
@@ -13,7 +13,6 @@ import {
   Eye,
   EyeOff,
   Layers,
-  FileCode,
   Calendar,
   Send,
   Plus
@@ -28,7 +27,7 @@ export default function MetaAds() {
     pixel_id: ""
   });
   const [isConfigured, setIsConfigured] = useState(false);
-  const [last4, setLast4] = useState("");
+  const [, setLast4] = useState("");
   const [showToken, setShowToken] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
 
@@ -47,10 +46,6 @@ export default function MetaAds() {
   
   // Deploy success modal state
   const [successDetails, setSuccessDetails] = useState(null);
-
-  useEffect(() => {
-    fetchMetaData();
-  }, []);
 
   const fetchMetaData = async () => {
     try {
@@ -76,6 +71,11 @@ export default function MetaAds() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchMetaData();
+  }, []);
 
   const handleSaveConfig = async (e) => {
     e.preventDefault();

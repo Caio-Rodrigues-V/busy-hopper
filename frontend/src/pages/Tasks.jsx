@@ -1,20 +1,16 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { taskAPI, agentAPI } from "../services/api";
 import { 
   KanbanSquare, 
   Plus, 
   Clock, 
-  Play, 
   CheckCircle, 
-  XCircle, 
   User, 
-  ChevronRight, 
   Database,
   Cpu,
   Coins,
   AlertTriangle,
-  Loader2,
-  Paperclip
+  Loader2
 } from "lucide-react";
 
 export default function Tasks() {
@@ -50,6 +46,7 @@ export default function Tasks() {
         socketRef.current.close();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fetch runs when selected task changes
@@ -59,7 +56,7 @@ export default function Tasks() {
     }
   }, [selectedTask]);
 
-  const fetchInitialData = async () => {
+  async function fetchInitialData() {
     try {
       const [tasksRes, agentsRes] = await Promise.all([
         taskAPI.list(),
@@ -73,9 +70,9 @@ export default function Tasks() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const fetchRuns = async (taskId) => {
+  async function fetchRuns(taskId) {
     setLoadingRuns(true);
     try {
       const res = await taskAPI.getRuns(taskId);
@@ -85,9 +82,9 @@ export default function Tasks() {
     } finally {
       setLoadingRuns(false);
     }
-  };
+  }
 
-  const connectWebSocket = () => {
+  function connectWebSocket() {
     const companyId = localStorage.getItem("companyId");
     if (!companyId || !isMountedRef.current) return;
 
@@ -138,7 +135,7 @@ export default function Tasks() {
         if (isMountedRef.current) connectWebSocket();
       }, 5000);
     };
-  };
+  }
 
   const logger = (msg) => {
     console.log(`[WebSocket] ${msg}`);
@@ -179,10 +176,7 @@ export default function Tasks() {
     }
   };
 
-  // Group tasks by status columns
-  const getTasksByStatus = (status) => {
-    return tasks.filter(t => t.status === status);
-  };
+
 
   const getAgentName = (agentId) => {
     const agent = agents.find(a => a.id === agentId);
@@ -389,7 +383,7 @@ export default function Tasks() {
 
                       {/* Steps chain */}
                       <div className="space-y-3.5 pl-3 border-l-2 border-brand-primary/20">
-                        {run.steps.map((step, sIdx) => (
+                        {run.steps.map((step) => (
                           <div key={step.id} className="relative pl-5 text-xs text-dark-muted leading-relaxed">
                             {/* Bullet icon */}
                             <div className="absolute -left-6 top-1.5 w-2 h-2 bg-brand-primary rounded-full ring-4 ring-brand-primary/10" />

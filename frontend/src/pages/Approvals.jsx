@@ -1,13 +1,11 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { approvalAPI } from "../services/api";
 import { 
   CheckSquare, 
   Check, 
   X, 
   Clock, 
-  User, 
   Terminal,
-  DollarSign,
   AlertTriangle,
   Loader2
 } from "lucide-react";
@@ -18,11 +16,7 @@ export default function Approvals() {
   const [error, setError] = useState("");
   const [actingId, setActingId] = useState(null);
 
-  useEffect(() => {
-    fetchApprovals();
-  }, []);
-
-  const fetchApprovals = async () => {
+  async function fetchApprovals() {
     try {
       const res = await approvalAPI.list();
       setApprovals(res.data);
@@ -32,7 +26,12 @@ export default function Approvals() {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchApprovals();
+  }, []);
 
   const handleDecision = async (id, decision) => {
     setActingId(id);

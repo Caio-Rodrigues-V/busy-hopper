@@ -1,16 +1,12 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { credentialAPI, companyAPI, auditAPI } from "../services/api";
 import { 
-  Settings as SettingsIcon, 
-  ShieldCheck, 
   Trash2, 
   KeyRound, 
-  Activity,
   FileText,
   DollarSign,
   TrendingUp,
   Percent,
-  Plus,
   Loader2,
   AlertTriangle
 } from "lucide-react";
@@ -35,11 +31,7 @@ export default function Settings() {
   const [awsRegion, setAwsRegion] = useState("us-east-1");
   const [testingKey, setTestingKey] = useState(false);
 
-  useEffect(() => {
-    fetchSettingsData();
-  }, []);
-
-  const fetchSettingsData = async () => {
+  async function fetchSettingsData() {
     const companyId = localStorage.getItem("companyId");
     try {
       const [credRes, auditRes, companyRes] = await Promise.all([
@@ -57,7 +49,12 @@ export default function Settings() {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchSettingsData();
+  }, []);
 
   const handleUpdateCompanySettings = async (e) => {
     e.preventDefault();

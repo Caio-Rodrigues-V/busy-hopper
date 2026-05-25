@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { companyAPI } from "../services/api";
 import { 
@@ -27,11 +27,7 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  useEffect(() => {
-    fetchCompanies();
-  }, []);
-
-  const fetchCompanies = async () => {
+  async function fetchCompanies() {
     try {
       const res = await companyAPI.list();
       setCompanies(res.data);
@@ -54,7 +50,12 @@ export default function Layout({ children }) {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchCompanies();
+  }, []);
 
   const handleCompanyChange = (e) => {
     const val = e.target.value;

@@ -1,12 +1,9 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { agentAPI } from "../services/api";
 import { 
   Network, 
   User, 
   ArrowDown, 
-  Settings2,
-  DollarSign,
-  ShieldCheck,
   Plus,
   Loader2,
   AlertTriangle,
@@ -30,10 +27,10 @@ export default function OrgChart() {
   const [title, setTitle] = useState("");
   const [rolePrompt, setRolePrompt] = useState("");
   const [bossAgentId, setBossAgentId] = useState("");
-  const [adapterType, setAdapterType] = useState("claude");
+  const [adapterType] = useState("claude");
   const [model, setModel] = useState("claude-3-5-sonnet-20241022");
   const [customModel, setCustomModel] = useState("");
-  const [temperature, setTemperature] = useState(0.0);
+  const [temperature] = useState(0.0);
   const [monthlyBudget, setMonthlyBudget] = useState(50.0);
   const [selectedTools, setSelectedTools] = useState([]);
   const [submitting, setSubmitting] = useState(false);
@@ -70,6 +67,7 @@ export default function OrgChart() {
         setSelectedArtifactBlobUrl("");
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inspectedAgent]);
 
   useEffect(() => {
@@ -144,6 +142,7 @@ export default function OrgChart() {
         socketRef.current.close();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const connectWebSocket = () => {
