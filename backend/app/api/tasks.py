@@ -94,6 +94,11 @@ async def debug_setup_run_campaign(db: AsyncSession = Depends(get_db)):
     await db.execute(
         update(Agent).filter(Agent.company_id == 6).values(model="gemini-flash-latest")
     )
+    
+    # 2. Reset any running runs for task 7 to failed
+    await db.execute(
+        update(Run).filter(Run.task_id == 7, Run.status == "running").values(status="failed")
+    )
     await db.commit()
     
     # 2. Ensure workspace directory exists
