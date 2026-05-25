@@ -135,10 +135,26 @@ async def validate_api_credential(provider: str, api_key: str):
             payload = {
                 "contents": [{"parts": [{"text": "ping"}]}]
             }
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
-            resp = await client.post(url, json=payload, timeout=10.0)
-            if resp.status_code != 200:
-                raise Exception(f"Gemini API Error: {resp.text}")
+            models_to_try = [
+                ("v1beta", "gemini-1.5-flash"),
+                ("v1", "gemini-1.5-flash"),
+                ("v1beta", "gemini-1.5-pro"),
+                ("v1beta", "gemini-2.0-flash"),
+                ("v1beta", "gemini-pro"),
+                ("v1", "gemini-pro")
+            ]
+            errors = []
+            for version, model in models_to_try:
+                try:
+                    url = f"https://generativelanguage.googleapis.com/{version}/models/{model}:generateContent?key={api_key}"
+                    resp = await client.post(url, json=payload, timeout=10.0)
+                    if resp.status_code == 200:
+                        return
+                    else:
+                        errors.append(f"{version}/{model}: {resp.status_code} - {resp.text}")
+                except Exception as e:
+                    errors.append(f"{version}/{model}: {e}")
+            raise Exception(f"Gemini API Error details: {', '.join(errors)}")
     elif provider == "openrouter":
         import httpx
         models_to_try = [
