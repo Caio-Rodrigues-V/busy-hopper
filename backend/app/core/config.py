@@ -1,5 +1,5 @@
 import os
-from typing import List, Optional
+from typing import List, Optional, Any
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: Optional[str] = None
     
     # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"]
+    CORS_ORIGINS: Any = ["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"]
 
     # LLM pricing rates (per 1,000,000 tokens)
     LLM_RATES: dict = {
@@ -80,10 +80,10 @@ class Settings(BaseSettings):
         elif self.DATABASE_URL.startswith("postgres://"):
             self.DATABASE_URL = self.DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
 
-        # Resolve CORS origins from environment variable dynamically
-        cors_env = os.getenv("CORS_ORIGINS")
-        if cors_env:
-            if cors_env.strip() == "*":
+        # Resolve CORS origins from environment variable dynamically if it was parsed as a string
+        if isinstance(self.CORS_ORIGINS, str):
+            cors_env = self.CORS_ORIGINS.strip()
+            if cors_env == "*":
                 self.CORS_ORIGINS = ["*"]
             elif cors_env.startswith("[") and cors_env.endswith("]"):
                 import json
