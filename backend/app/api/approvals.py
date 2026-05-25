@@ -9,6 +9,8 @@ from app.core.deps import get_db, get_current_user, get_current_company
 from app.models.user import User
 from app.models.company import Company
 from app.models.approval import Approval
+from app.models.task import Task
+from app.models.agent import Agent
 from app.schemas.approval import ApprovalDecision, ApprovalResponse
 from app.services.agent_executor import create_audit_entry, AgentExecutor
 from app.core.database import SessionLocal
