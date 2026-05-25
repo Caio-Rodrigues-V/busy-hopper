@@ -205,15 +205,19 @@ async def debug_gemini(db: AsyncSession = Depends(get_db)):
     except Exception as e:
         results["bearer_error"] = str(e)
 
-    # Test 2: OpenAI compatible URL with query parameter key
-    url2 = f"https://generativelanguage.googleapis.com/v1beta/openai/chat/completions?key={api_key}"
+    # Test 3: List available models
+    url3 = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
     try:
         async with httpx.AsyncClient() as client:
-            resp2 = await client.post(url2, json=payload, timeout=10.0)
-            results["query_status"] = resp2.status_code
-            results["query_response"] = resp2.text[:500]
+            resp3 = await client.get(url3, timeout=10.0)
+            results["list_models_status"] = resp3.status_code
+            if resp3.status_code == 200:
+                models_data = resp3.json()
+                results["available_models"] = [m.get("name") for m in models_data.get("models", [])]
+            else:
+                results["list_models_response"] = resp3.text[:500]
     except Exception as e:
-        results["query_error"] = str(e)
+        results["list_models_error"] = str(e)
         
     return results
 
