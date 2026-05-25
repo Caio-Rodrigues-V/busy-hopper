@@ -62,6 +62,7 @@ export const companyAPI = {
   create: (name, mission) => api.post("/companies/", { name, mission }),
   update: (id, data) => api.put(`/companies/${id}`, data),
   get: (id) => api.get(`/companies/${id}`),
+  delete: (id) => api.delete(`/companies/${id}`),
 };
 
 export const credentialAPI = {

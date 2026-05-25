@@ -82,3 +82,27 @@ async def update_company(
         "UPDATE_COMPANY_SETTINGS", company_in.model_dump(exclude_unset=True)
     )
     return company
+
+@router.delete("/{company_id}")
+async def delete_company(
+    company_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    result = await db.execute(
+        select(Company).filter(Company.id == company_id, Company.user_id == current_user.id)
+    )
+    company = result.scalars().first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+        
+    await db.delete(company)
+    await db.commit()
+    
+    # Register audit entry
+    await create_audit_entry(
+        db, company_id, f"user_{current_user.id}",
+        "DELETE_COMPANY", {"name": company.name}
+    )
+    return {"status": "success", "message": f"Company {company.name} deleted successfully"}
+

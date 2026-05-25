@@ -14,7 +14,8 @@ import {
   Megaphone,
   X,
   Menu,
-  BookOpen
+  BookOpen,
+  Trash2
 } from "lucide-react";
 
 export default function Layout({ children }) {
@@ -86,6 +87,26 @@ export default function Layout({ children }) {
       console.error("Failed to create company:", err);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDeleteCompany = async () => {
+    if (!selectedCompanyId) return;
+    const currentCompany = companies.find(c => c.id.toString() === selectedCompanyId);
+    if (!currentCompany) return;
+
+    const confirmed = window.confirm(
+      `ATENÇÃO: Você está prestes a excluir a empresa "${currentCompany.name}".\n\nIsso apagará permanentemente todos os agentes, tarefas, aprovações, logs de auditoria e campanhas do Meta Ads associadas.\n\nEsta ação NÃO pode ser desfeita. Tem certeza que deseja prosseguir?`
+    );
+    if (!confirmed) return;
+
+    try {
+      await companyAPI.delete(selectedCompanyId);
+      localStorage.removeItem("companyId");
+      window.location.reload();
+    } catch (err) {
+      console.error("Failed to delete company:", err);
+      alert("Erro ao excluir a empresa. Por favor, tente novamente.");
     }
   };
 
@@ -167,10 +188,17 @@ export default function Layout({ children }) {
               </select>
               <button 
                 onClick={() => setShowCreateModal(true)}
-                className="bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary border border-brand-primary/30 p-2.5 rounded-xl transition-all shadow-md hover:shadow-brand-primary/5"
+                className="bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary border border-brand-primary/30 p-2.5 rounded-xl transition-all shadow-md hover:shadow-brand-primary/5 shrink-0"
                 title="Criar Empresa"
               >
                 <Plus size={16} />
+              </button>
+              <button 
+                onClick={handleDeleteCompany}
+                className="bg-brand-danger/10 hover:bg-brand-danger/20 text-brand-danger border border-brand-danger/30 p-2.5 rounded-xl transition-all shadow-md hover:shadow-brand-danger/5 shrink-0"
+                title="Excluir Empresa"
+              >
+                <Trash2 size={16} />
               </button>
             </div>
           </div>
