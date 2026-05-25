@@ -31,6 +31,9 @@ async def debug_db(db: AsyncSession = Depends(get_db)):
     runs = (await db.execute(select(Run))).scalars().all()
     users = (await db.execute(select(User))).scalars().all()
     
+    from app.models.audit import AuditLog
+    audit_logs = (await db.execute(select(AuditLog).order_by(AuditLog.created_at.desc()).limit(30))).scalars().all()
+    
     # Let's get run steps in detail
     run_steps = {}
     for r in runs:
@@ -48,9 +51,10 @@ async def debug_db(db: AsyncSession = Depends(get_db)):
     return {
         "users": [{"id": u.id, "email": u.email} for u in users],
         "companies": [{"id": c.id, "name": c.name, "user_id": c.user_id} for c in companies],
-        "agents": [{"id": a.id, "name": a.name, "company_id": a.company_id, "status": a.status, "tools": a.tools} for a in agents],
+        "agents": [{"id": a.id, "name": a.name, "model": a.model, "company_id": a.company_id, "status": a.status, "tools": a.tools} for a in agents],
         "tasks": [{"id": t.id, "title": t.title, "status": t.status, "company_id": t.company_id, "assignee": t.assignee_agent_id} for t in tasks],
-        "runs": [{"id": r.id, "task_id": r.task_id, "status": r.status, "steps": run_steps.get(r.id, [])} for r in runs]
+        "runs": [{"id": r.id, "task_id": r.task_id, "status": r.status, "steps": run_steps.get(r.id, [])} for r in runs],
+        "audit_logs": [{"id": l.id, "actor": l.actor, "action": l.action, "payload": l.payload} for l in audit_logs]
     }
 
 @router.get("/", response_model=List[TaskResponse])
