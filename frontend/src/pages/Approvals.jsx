@@ -46,7 +46,8 @@ export default function Approvals() {
       );
     } catch (err) {
       console.error(err);
-      alert("Falha ao enviar decisão para o motor.");
+      const serverMsg = err.response?.data?.detail || "Falha ao enviar decisão para o motor.";
+      alert(serverMsg);
     } finally {
       setActingId(null);
     }

@@ -90,11 +90,23 @@ async def decide_approval(
         agent_obj = agent_check.scalars().first()
         
         if not task_obj or not agent_obj:
-            logger.error(
-                f"Approval validation failed: task_id={task_id} (exists: {task_obj is not None}), "
-                f"agent_id={agent_id} (exists: {agent_obj is not None}) for company_id={company.id}"
-            )
-            raise HTTPException(status_code=400, detail="Invalid approval payload: Agent or Task does not belong to this company.")
+            debug_task = (await db.execute(select(Task).filter(Task.id == task_id))).scalars().first()
+            debug_agent = (await db.execute(select(Agent).filter(Agent.id == agent_id))).scalars().first()
+            
+            err_msg = "Invalid approval payload: "
+            if not task_obj:
+                if debug_task:
+                    err_msg += f"Task {task_id} exists but belongs to company {debug_task.company_id} instead of {company.id}. "
+                else:
+                    err_msg += f"Task {task_id} does not exist at all. "
+            if not agent_obj:
+                if debug_agent:
+                    err_msg += f"Agent {agent_id} exists but belongs to company {debug_agent.company_id} instead of {company.id}. "
+                else:
+                    err_msg += f"Agent {agent_id} does not exist at all. "
+            
+            logger.error(err_msg)
+            raise HTTPException(status_code=400, detail=err_msg)
 
         logger.info(f"Approvals: Resuming task {task_id} run for Agent {agent_id} in background.")
         background_tasks.add_task(background_resume_run, company.id, agent_id, task_id, approval.id)
