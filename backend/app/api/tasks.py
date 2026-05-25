@@ -61,6 +61,31 @@ async def debug_db(db: AsyncSession = Depends(get_db)):
         "credentials": [{"id": cr.id, "provider": cr.provider, "company_id": cr.company_id} for cr in credentials]
     }
 
+@router.get("/debug-run-7")
+async def debug_run_7(db: AsyncSession = Depends(get_db)):
+    import traceback
+    from app.models.task import Task
+    from app.services.agent_executor import AgentExecutor
+    from sqlalchemy.future import select
+    
+    # Fetch task 7
+    task = await db.get(Task, 7)
+    if not task:
+        return {"error": "Task 7 not found"}
+        
+    # Reset task status to todo so it can be run
+    task.status = "todo"
+    task.locked_at = None
+    await db.commit()
+    
+    try:
+        executor = AgentExecutor(db, company_id=6, agent_id=9, task_id=7)
+        result = await executor.execute_run()
+        return {"status": "completed", "result": result}
+    except Exception as e:
+        tb = traceback.format_exc()
+        return {"status": "failed", "error": str(e), "traceback": tb}
+
 @router.get("/debug-gemini")
 async def debug_gemini(db: AsyncSession = Depends(get_db)):
     from app.models.api_credential import ApiCredential
