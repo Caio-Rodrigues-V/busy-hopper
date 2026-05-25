@@ -132,13 +132,11 @@ async def validate_api_credential(provider: str, api_key: str):
     elif provider == "gemini":
         import httpx
         async with httpx.AsyncClient() as client:
-            headers = {"Authorization": f"Bearer {api_key}"}
             payload = {
-                "model": "gemini-1.5-flash",
-                "messages": [{"role": "user", "content": "ping"}],
-                "max_tokens": 1
+                "contents": [{"parts": [{"text": "ping"}]}]
             }
-            resp = await client.post("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", headers=headers, json=payload, timeout=10.0)
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+            resp = await client.post(url, json=payload, timeout=10.0)
             if resp.status_code != 200:
                 raise Exception(f"Gemini API Error: {resp.text}")
     elif provider == "openrouter":
