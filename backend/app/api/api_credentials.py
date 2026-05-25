@@ -136,19 +136,19 @@ async def validate_api_credential(provider: str, api_key: str):
                 "contents": [{"parts": [{"text": "ping"}]}]
             }
             models_to_try = [
-                ("v1beta", "gemini-1.5-flash"),
-                ("v1", "gemini-1.5-flash"),
-                ("v1beta", "gemini-1.5-pro"),
+                ("v1beta", "gemini-2.5-flash"),
                 ("v1beta", "gemini-2.0-flash"),
-                ("v1beta", "gemini-pro"),
-                ("v1", "gemini-pro")
+                ("v1beta", "gemini-flash-latest"),
+                ("v1beta", "gemini-pro-latest"),
+                ("v1beta", "gemini-1.5-flash"),
+                ("v1", "gemini-1.5-flash")
             ]
             errors = []
             for version, model in models_to_try:
                 try:
                     url = f"https://generativelanguage.googleapis.com/{version}/models/{model}:generateContent?key={api_key}"
                     resp = await client.post(url, json=payload, timeout=10.0)
-                    if resp.status_code == 200:
+                    if resp.status_code == 200 or resp.status_code == 429:
                         return
                     else:
                         errors.append(f"{version}/{model}: {resp.status_code}")
