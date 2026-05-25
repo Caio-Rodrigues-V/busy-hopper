@@ -50,3 +50,15 @@ def test_cost_estimation_rates():
     # Output cost: 500 * 0.000075 = 0.0375
     # Total: 0.0525
     assert abs(opus_cost - 0.0525) < 1e-6
+
+def test_api_key_sanitization():
+    from app.api.api_credentials import sanitize_api_key
+    dirty_key = "  sk-or-v1-key123456\xa0\u200b\r\n  "
+    clean_key = sanitize_api_key(dirty_key)
+    assert clean_key == "sk-or-v1-key123456"
+    
+    unicode_dirty_key = "sk-or-v1-kêy123\u200d"
+    clean_unicode_key = sanitize_api_key(unicode_dirty_key)
+    # 'ê' is non-ASCII (ord > 127) and will be removed, keeping only ASCII characters
+    assert clean_unicode_key == "sk-or-v1-ky123"
+

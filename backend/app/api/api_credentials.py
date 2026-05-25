@@ -11,6 +11,16 @@ from app.schemas.api_credential import ApiCredentialCreate, ApiCredentialRespons
 from app.core.security import encrypt_key
 from app.services.agent_executor import create_audit_entry
 
+def sanitize_api_key(api_key: str) -> str:
+    if not api_key:
+        return ""
+    # Strip whitespace/newlines
+    api_key = api_key.strip()
+    # Remove common invisible unicode characters (e.g. non-breaking space, zero-width space, etc.)
+    api_key = api_key.replace("\xa0", "").replace("\u200b", "").replace("\u200c", "").replace("\u200d", "").replace("\ufeff", "")
+    # Keep only printable ASCII characters (char codes 32 to 126)
+    return "".join(c for c in api_key if 32 <= ord(c) <= 126)
+
 router = APIRouter()
 
 @router.get("/", response_model=List[ApiCredentialResponse])
@@ -35,8 +45,9 @@ async def create_credential(
     )
     existing = (await db.execute(existing_query)).scalars().first()
     
-    last4_str = cred_in.api_key[-4:] if len(cred_in.api_key) >= 4 else cred_in.api_key
-    encrypted = encrypt_key(cred_in.api_key)
+    clean_key = sanitize_api_key(cred_in.api_key)
+    last4_str = clean_key[-4:] if len(clean_key) >= 4 else clean_key
+    encrypted = encrypt_key(clean_key)
 
     if existing:
         existing.encrypted_key = encrypted
@@ -97,6 +108,7 @@ class CredentialValidateRequest(BaseModel):
     api_key: str
 
 async def validate_api_credential(provider: str, api_key: str):
+    api_key = sanitize_api_key(api_key)
     if provider == "anthropic":
         from anthropic import AsyncAnthropic
         client = AsyncAnthropic(api_key=api_key)
