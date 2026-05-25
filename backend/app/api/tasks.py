@@ -61,6 +61,27 @@ async def debug_db(db: AsyncSession = Depends(get_db)):
         "credentials": [{"id": cr.id, "provider": cr.provider, "company_id": cr.company_id} for cr in credentials]
     }
 
+@router.get("/debug-workspace")
+async def debug_workspace():
+    import os
+    workspace_dir = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "..", "workspace", "company_6")
+    )
+    if not os.path.exists(workspace_dir):
+        return {"error": f"Workspace dir does not exist: {workspace_dir}"}
+        
+    files = os.listdir(workspace_dir)
+    contents = {}
+    for f in files:
+        if f.endswith(".txt") or f.endswith(".json") or f.endswith(".svg"):
+            try:
+                with open(os.path.join(workspace_dir, f), "r", encoding="utf-8") as file_obj:
+                    contents[f] = file_obj.read()
+            except Exception as e:
+                contents[f] = f"Error: {e}"
+                
+    return {"workspace_dir": workspace_dir, "files": files, "contents": contents}
+
 @router.get("/debug-run-7")
 async def debug_run_7(db: AsyncSession = Depends(get_db)):
     import traceback
