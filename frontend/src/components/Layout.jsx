@@ -13,7 +13,8 @@ import {
   Loader2,
   Megaphone,
   X,
-  Menu
+  Menu,
+  BookOpen
 } from "lucide-react";
 
 export default function Layout({ children }) {
@@ -101,6 +102,7 @@ export default function Layout({ children }) {
     { name: "Aprovações", path: "/approvals", icon: CheckSquare },
     { name: "Gestor de Tráfego", path: "/meta", icon: Megaphone },
     { name: "Configurações", path: "/settings", icon: Settings },
+    { name: "Histórico e Ajuda", path: "/changelog", icon: BookOpen },
   ];
 
   if (loading) {

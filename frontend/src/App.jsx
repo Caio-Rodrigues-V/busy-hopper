@@ -8,6 +8,7 @@ import Tasks from "./pages/Tasks";
 import Approvals from "./pages/Approvals";
 import Settings from "./pages/Settings";
 import MetaAds from "./pages/MetaAds";
+import Changelog from "./pages/Changelog";
 
 // Protect routes that are only allowed for authenticated board users
 function ProtectedRoute({ children }) {
@@ -72,6 +73,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <MetaAds />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/changelog"
+          element={
+            <ProtectedRoute>
+              <Changelog />
             </ProtectedRoute>
           }
         />
