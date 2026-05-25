@@ -61,6 +61,56 @@ async def debug_db(db: AsyncSession = Depends(get_db)):
         "credentials": [{"id": cr.id, "provider": cr.provider, "company_id": cr.company_id} for cr in credentials]
     }
 
+@router.get("/debug-gemini")
+async def debug_gemini(db: AsyncSession = Depends(get_db)):
+    from app.models.api_credential import ApiCredential
+    from app.core.security import decrypt_key
+    from sqlalchemy.future import select
+    import httpx
+    
+    query = select(ApiCredential).filter(
+        ApiCredential.company_id == 6,
+        ApiCredential.provider == "gemini"
+    )
+    cred = (await db.execute(query)).scalars().first()
+    if not cred:
+        return {"error": "No Gemini credentials found for Company 6"}
+        
+    try:
+        api_key = decrypt_key(cred.encrypted_key)
+    except Exception as e:
+        return {"error": f"Failed to decrypt key: {e}"}
+        
+    results = {}
+    
+    # Test 1: OpenAI compatible URL with Authorization header
+    url1 = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+    headers1 = {"Authorization": f"Bearer {api_key}"}
+    payload = {
+        "model": "gemini-2.5-flash",
+        "messages": [{"role": "user", "content": "ping"}],
+        "max_tokens": 5
+    }
+    try:
+        async with httpx.AsyncClient() as client:
+            resp1 = await client.post(url1, headers=headers1, json=payload, timeout=10.0)
+            results["bearer_status"] = resp1.status_code
+            results["bearer_response"] = resp1.text[:500]
+    except Exception as e:
+        results["bearer_error"] = str(e)
+
+    # Test 2: OpenAI compatible URL with query parameter key
+    url2 = f"https://generativelanguage.googleapis.com/v1beta/openai/chat/completions?key={api_key}"
+    try:
+        async with httpx.AsyncClient() as client:
+            resp2 = await client.post(url2, json=payload, timeout=10.0)
+            results["query_status"] = resp2.status_code
+            results["query_response"] = resp2.text[:500]
+    except Exception as e:
+        results["query_error"] = str(e)
+        
+    return results
+
 @router.get("/", response_model=List[TaskResponse])
 async def list_tasks(
     db: AsyncSession = Depends(get_db),
