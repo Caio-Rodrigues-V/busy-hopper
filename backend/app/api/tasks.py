@@ -321,3 +321,30 @@ async def list_task_runs(
     query = select(Run).filter(Run.task_id == task_id).options(selectinload(Run.steps)).order_by(Run.started_at.desc())
     result = await db.execute(query)
     return result.scalars().all()
+
+@router.delete("/{task_id}/runs", status_code=status.HTTP_204_NO_CONTENT)
+async def clear_task_runs(
+    task_id: int,
+    db: AsyncSession = Depends(get_db),
+    company: Company = Depends(get_current_company),
+    current_user: User = Depends(get_current_user)
+):
+    res = await db.execute(select(Task).filter(Task.id == task_id, Task.company_id == company.id))
+    task = res.scalars().first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found.")
+        
+    from sqlalchemy import delete
+    await db.execute(delete(Run).filter(Run.task_id == task_id))
+    
+    # Reset task state to todo so it can be re-run
+    task.status = "todo"
+    task.locked_at = None
+    db.add(task)
+    await db.commit()
+    
+    await create_audit_entry(
+        db, company.id, f"user_{current_user.id}",
+        "CLEAR_TASK_RUNS", {"task_id": task_id, "title": task.title}
+    )
+    return

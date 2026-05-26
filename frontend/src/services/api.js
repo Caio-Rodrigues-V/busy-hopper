@@ -87,6 +87,7 @@ export const taskAPI = {
   create: (data) => api.post("/tasks/", data),
   get: (id) => api.get(`/tasks/${id}`),
   getRuns: (id) => api.get(`/tasks/${id}/runs`),
+  clearRuns: (id) => api.delete(`/tasks/${id}/runs`),
 };
 
 export const approvalAPI = {

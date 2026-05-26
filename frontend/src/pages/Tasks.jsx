@@ -174,6 +174,18 @@ export default function Tasks() {
     } finally {
       setSubmitting(false);
     }
+  const handleClearLogs = async () => {
+    if (!selectedTask) return;
+    if (!window.confirm("Deseja realmente limpar o histórico de execuções desta tarefa? Isso também redefinirá o status dela para 'A Fazer'.")) return;
+    try {
+      await taskAPI.clearRuns(selectedTask.id);
+      setRuns([]);
+      refreshTasks();
+      setSelectedTask(prev => prev ? { ...prev, status: 'todo' } : null);
+    } catch (err) {
+      console.error("Failed to clear task runs:", err);
+      alert("Falha ao limpar histórico.");
+    }
   };
 
   const getAgentName = (agentId) => {
@@ -351,10 +363,20 @@ export default function Tasks() {
 
             {/* Execution Runs & Steps Log */}
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-dark-muted mb-3 flex items-center gap-2">
-                <Cpu size={14} />
-                <span>Histórico de Execuções</span>
-              </h3>
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-dark-muted flex items-center gap-2">
+                  <Cpu size={14} />
+                  <span>Histórico de Execuções</span>
+                </h3>
+                {runs.length > 0 && (
+                  <button
+                    onClick={handleClearLogs}
+                    className="text-xs text-brand-danger hover:text-brand-danger/80 border border-brand-danger/35 hover:border-brand-danger/60 px-3 py-1.5 rounded-xl transition-colors font-semibold"
+                  >
+                    Limpar Logs
+                  </button>
+                )}
+              </div>
 
               {loadingRuns ? (
                 <div className="py-12 flex justify-center text-dark-muted">
