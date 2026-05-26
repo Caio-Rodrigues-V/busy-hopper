@@ -169,7 +169,7 @@ async def debug_reset_all(db: AsyncSession = Depends(get_db)):
     return {"status": "success", "active_tasks_in_memory": list(_active_tasks)}
 
 @router.get("/debug-run-7")
-async def debug_run_7(db: AsyncSession = Depends(get_db)):
+async def debug_run_7(task_id: int = 7, agent_id: int = 9, db: AsyncSession = Depends(get_db)):
     import traceback
     from app.models.task import Task
     from app.models.run import Run
@@ -177,15 +177,15 @@ async def debug_run_7(db: AsyncSession = Depends(get_db)):
     from sqlalchemy.future import select
     from sqlalchemy import update
     
-    # 1. Reset any running runs for task 7 to failed
+    # 1. Reset any running runs for task to failed
     await db.execute(
-        update(Run).filter(Run.task_id == 7, Run.status == "running").values(status="failed")
+        update(Run).filter(Run.task_id == task_id, Run.status == "running").values(status="failed")
     )
     
-    # Fetch task 7
-    task = await db.get(Task, 7)
+    # Fetch task
+    task = await db.get(Task, task_id)
     if not task:
-        return {"error": "Task 7 not found"}
+        return {"error": f"Task {task_id} not found"}
         
     # Reset task status to todo so it can be run
     task.status = "todo"
@@ -193,7 +193,7 @@ async def debug_run_7(db: AsyncSession = Depends(get_db)):
     await db.commit()
     
     try:
-        executor = AgentExecutor(db, company_id=6, agent_id=9, task_id=7)
+        executor = AgentExecutor(db, company_id=6, agent_id=agent_id, task_id=task_id)
         result = await executor.execute_run()
         return {"status": "completed", "result": result}
     except Exception as e:
