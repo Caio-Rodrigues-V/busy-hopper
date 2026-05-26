@@ -190,6 +190,19 @@ export default function Tasks() {
     }
   };
 
+  const handleDeleteTask = async () => {
+    if (!selectedTask) return;
+    if (!window.confirm("Deseja realmente deletar esta tarefa de forma permanente? Todos os logs e histórico associados serão apagados do sistema.")) return;
+    try {
+      await taskAPI.delete(selectedTask.id);
+      setSelectedTask(null);
+      refreshTasks();
+    } catch (err) {
+      console.error("Failed to delete task:", err);
+      alert("Falha ao excluir a tarefa.");
+    }
+  };
+
   const getAgentName = (agentId) => {
     const agent = agents.find(a => a.id === agentId);
     return agent ? agent.name : "Não Atribuído";
@@ -302,12 +315,20 @@ export default function Tasks() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-brand-primary">Inspeção de Execução da Tarefa</span>
               <h2 className="text-xl font-bold text-white">{selectedTask.title}</h2>
             </div>
-            <button 
-              onClick={() => setSelectedTask(null)}
-              className="text-dark-muted hover:text-white border border-dark-border hover:bg-dark-border/40 px-3 py-1.5 rounded-xl text-xs transition-colors"
-            >
-              Fechar Inspetor
-            </button>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={handleDeleteTask}
+                className="text-brand-danger hover:bg-brand-danger/10 border border-brand-danger/30 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors"
+              >
+                Excluir Tarefa
+              </button>
+              <button 
+                onClick={() => setSelectedTask(null)}
+                className="text-dark-muted hover:text-white border border-dark-border hover:bg-dark-border/40 px-3 py-1.5 rounded-xl text-xs transition-colors"
+              >
+                Fechar Inspetor
+              </button>
+            </div>
           </div>
 
           {/* Trace body */}

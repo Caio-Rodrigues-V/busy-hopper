@@ -348,3 +348,24 @@ async def clear_task_runs(
         "CLEAR_TASK_RUNS", {"task_id": task_id, "title": task.title}
     )
     return
+
+@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_task(
+    task_id: int,
+    db: AsyncSession = Depends(get_db),
+    company: Company = Depends(get_current_company),
+    current_user: User = Depends(get_current_user)
+):
+    res = await db.execute(select(Task).filter(Task.id == task_id, Task.company_id == company.id))
+    task = res.scalars().first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found.")
+        
+    await db.delete(task)
+    await db.commit()
+    
+    await create_audit_entry(
+        db, company.id, f"user_{current_user.id}",
+        "DELETE_TASK", {"title": task.title}
+    )
+    return
