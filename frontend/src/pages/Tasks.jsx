@@ -174,6 +174,8 @@ export default function Tasks() {
     } finally {
       setSubmitting(false);
     }
+  };
+
   const handleClearLogs = async () => {
     if (!selectedTask) return;
     if (!window.confirm("Deseja realmente limpar o histórico de execuções desta tarefa? Isso também redefinirá o status dela para 'A Fazer'.")) return;
