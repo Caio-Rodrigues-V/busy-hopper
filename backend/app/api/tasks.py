@@ -169,7 +169,7 @@ async def debug_reset_all(db: AsyncSession = Depends(get_db)):
     return {"status": "success", "active_tasks_in_memory": list(_active_tasks)}
 
 @router.get("/debug-run-7")
-async def debug_run_7(task_id: int = 7, agent_id: int = 9, db: AsyncSession = Depends(get_db)):
+async def debug_run_7(task_id: int = 7, agent_id: int = 9, company_id: int = 6, db: AsyncSession = Depends(get_db)):
     import traceback
     from app.models.task import Task
     from app.models.run import Run
@@ -193,7 +193,7 @@ async def debug_run_7(task_id: int = 7, agent_id: int = 9, db: AsyncSession = De
     await db.commit()
     
     try:
-        executor = AgentExecutor(db, company_id=6, agent_id=agent_id, task_id=task_id)
+        executor = AgentExecutor(db, company_id=company_id, agent_id=agent_id, task_id=task_id)
         result = await executor.execute_run()
         return {"status": "completed", "result": result}
     except Exception as e:
