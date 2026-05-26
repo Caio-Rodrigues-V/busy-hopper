@@ -1065,6 +1065,10 @@ class AgentExecutor:
                         url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
                         headers = {"Authorization": f"Bearer {api_key}"}
                         model_name = agent.model if agent.model else "gemini-1.5-flash"
+                        if model_name == "gemini-1.5-pro":
+                            model_name = "gemini-pro-latest"
+                        elif model_name == "gemini-1.5-flash":
+                            model_name = "gemini-flash-latest"
                     else: # openrouter
                         url = "https://openrouter.ai/api/v1/chat/completions"
                         headers = {
