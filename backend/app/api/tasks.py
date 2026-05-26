@@ -369,3 +369,15 @@ async def delete_task(
         "DELETE_TASK", {"title": task.title}
     )
     return
+
+@router.get("/debug-resume/{task_id}/{agent_id}/{approval_id}")
+async def debug_resume(task_id: int, agent_id: int, approval_id: int, db: AsyncSession = Depends(get_db)):
+    import traceback
+    from app.services.agent_executor import AgentExecutor
+    try:
+        executor = AgentExecutor(db, company_id=7, agent_id=agent_id, task_id=task_id)
+        result = await executor.resume_run(approval_id)
+        return {"status": "completed", "result": result}
+    except Exception as e:
+        tb = traceback.format_exc()
+        return {"status": "failed", "error": str(e), "traceback": tb}
