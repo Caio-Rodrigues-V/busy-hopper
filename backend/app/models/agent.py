@@ -25,4 +25,4 @@ class Agent(Base):
     # Self-referencing boss-subordinate relation
     boss = relationship("Agent", remote_side=[id], backref="subordinates")
     tasks = relationship("Task", back_populates="assignee")
-    runs = relationship("Run", back_populates="agent")
+    runs = relationship("Run", back_populates="agent", cascade="all, delete-orphan")
