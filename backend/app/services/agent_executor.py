@@ -329,11 +329,16 @@ class AgentExecutor:
             raise ValueError("Cross-tenant execution attempt detected!")
 
         if agent.status != "active":
+            task.status = "failed"
+            task.locked_at = None
+            await self.db.commit()
             return f"Agent {agent.name} is not active (status: {agent.status})."
 
         # 2. Budget verification
         agent_spend, company_spend = await calculate_monthly_spend(self.db, self.company_id, self.agent_id)
         if agent_spend >= agent.monthly_budget_usd:
+            task.status = "failed"
+            task.locked_at = None
             agent.status = "exhausted"
             await self.db.commit()
             await create_audit_entry(
@@ -344,6 +349,9 @@ class AgentExecutor:
             return "Agent monthly budget limit exceeded."
 
         if company_spend >= company.monthly_budget_usd:
+            task.status = "failed"
+            task.locked_at = None
+            await self.db.commit()
             # Pause agent execution (company scope)
             await create_audit_entry(
                 self.db, self.company_id, "system",
@@ -367,6 +375,9 @@ class AgentExecutor:
                     api_key = os.getenv("OPENROUTER_API_KEY")
                 
         if not api_key and provider != "aws_bedrock" and provider != "mock":
+            task.status = "failed"
+            task.locked_at = None
+            await self.db.commit()
             return f"{provider.capitalize()} API Key not configured."
 
         # 4. Atomic Checkout (locking task)
